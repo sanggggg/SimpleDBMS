@@ -1,0 +1,8 @@
+<component name="ArtifactManager">
+  <artifact type="jar" build-on-make="true" name="PRJ1-2_2018-15366:jar">
+    <output-path>$PROJECT_DIR$/out/artifacts/PRJ1_2_2018_15366_jar</output-path>
+    <root id="archive" name="PRJ1-2_2018-15366.jar">
+      <element id="module-output" name="PRJ1-2_2018-15366" />
+    </root>
+  </artifact>
+</component>

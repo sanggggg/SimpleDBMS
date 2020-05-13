@@ -1,0 +1,638 @@
+//options
+//{
+//  static = true;
+//  DEBUG_PARSER = false;
+//  IGNORE_CASE = true;
+//}
+
+PARSER_BEGIN(SimpleDBMSParser)
+
+package kr.ac.snu.ids;
+
+import com.sleepycat.je.*;
+import kr.ac.snu.ids.db.BerKeleyDB;
+import kr.ac.snu.ids.db.DataDefinitionManager;
+import kr.ac.snu.ids.definition.*;
+import kr.ac.snu.ids.exceptions.DefinitionError;
+import kr.ac.snu.ids.exceptions.create.CreateTableError;
+import kr.ac.snu.ids.exceptions.NoSuchTableError;
+import java.util.ArrayList;
+import java.util.List;
+
+public class SimpleDBMSParser
+{
+    public static final int PRINT_SYNTAX_ERROR = 0;
+
+    public static final int PRINT_CREATE_TABLE = 1;
+
+    public static final int PRINT_DROP_TABLE = 2;
+
+    public static final int PRINT_DESC = 3;
+
+    public static final int PRINT_SHOW_TABLES = 4;
+
+    public static final int PRINT_INSERT_QUERY = 5;
+
+    public static final int PRINT_DELETE_QUERY = 6;
+
+    public static final int PRINT_SELECT_QUERY = 7;
+
+    public static DataDefinitionManager dbManager = null;
+
+    public static void main(String[] args) throws ParseException {
+        Database db = BerKeleyDB.getInstance();
+        dbManager = new DataDefinitionManager(db);
+
+        SimpleDBMSParser parser = new SimpleDBMSParser(System.in);
+        System.out.print("DB_2018-15366> ");
+        while (true) {
+            try {
+                SimpleDBMSParser.command();
+            }
+            catch (Exception e) {
+                e.printStackTrace();
+                printMessage("Syntax error", true);
+                SimpleDBMSParser.ReInit(System.in);
+            }
+        }
+    }
+
+    /**
+    * query의 종류에 대응하는 메세지를 콘솔에 출력한다
+    * lastLine은 유저의 queryList 입력이 끝난 경우 true이며 이때 콘솔에 prompt를 출력한다.
+    */
+    public static void printMessage(String q, boolean lastLine) {
+//        switch(q) {
+//            case PRINT_SYNTAX_ERROR:
+//                System.out.println("Syntax error");
+//                break;
+//            case PRINT_CREATE_TABLE:
+//                System.out.println("'CREATE TABLE' requested");
+//                break;
+//            case PRINT_DROP_TABLE:
+//                System.out.println("'DROP TABLE' requested");
+//                break;
+//            case PRINT_DESC:
+//                System.out.println("'DESC' requested");
+//                break;
+//            case PRINT_SHOW_TABLES:
+//                System.out.println("'SHOW TABLES' requested");
+//                break;
+//            case PRINT_INSERT_QUERY:
+//                System.out.println("'INSERT' requested");
+//                break;
+//            case PRINT_DELETE_QUERY:
+//                System.out.println("'DELETE' requested");
+//                break;
+//            case PRINT_SELECT_QUERY:
+//                System.out.println("'SELECT' requested");
+//            break;
+//        }
+        System.out.println(q);
+        if (lastLine)
+            System.out.print("DB_2018-15366> ");
+    }
+}
+
+PARSER_END(SimpleDBMSParser)
+
+SKIP : { < SPACE : " " > | "\n" |"\r" | "\t" }
+
+// 예약어로 사용되는 Keyword 토
+TOKEN :
+{
+  < EXIT : "exit" >
+| < INT : "int" >
+| < CHAR : "char" >
+| < DATE : "date" >
+| < TABLE : "table" >
+| < CREATE : "create" >
+| < DROP : "drop" >
+| < DESC : "desc" >
+| < SHOW : "show" >
+| < TABLES : "tables" >
+| < INSERT : "insert" >
+| < INTO : "into" >
+| < DELETE : "delete" >
+| < SELECT : "select" >
+| < FROM : "from" >
+| < WHERE : "where" >
+| < AS : "as" >
+| < OR : "or" >
+| < AND : "and" >
+| < IS : "is" >
+| < NOT : "not" >
+| < KEY : "key" >
+| < PRIMARY : "primary" >
+| < FOREIGN : "foreign" >
+| < REFERENCES : "references" >
+| < VALUES : "values" >
+| < NOT_NULL : "not null" >
+| < NULL : "null" >
+| < ASTERISK : "*" >
+| < PERIOD : "." >
+}
+
+// 술어 표현을 위한 비교 연산자 토
+TOKEN :
+{
+  < INEQ_S : "<" >
+| < INEQ_B : ">" >
+| < INEQ_SE : "<=" >
+| < INEQ_BE : ">=" >
+| < INEQ_E : "=" >
+| < INEQ_NE : "!=" >
+}
+
+TOKEN :
+{
+  < #NON_QUOTE_SPECIAL_CHARACTERS : "`"|"~"|"!"|"@"|"#"|"$"|"%"|"^"|"&"|"*"|"("|")"|"_"|
+                                    	"-"|"+"|"="|"{"|"}"|"["|"]"|"|"|":"|";"|"<"|","|">"|"."|"?"|"/"|"\\"|"\""|"\n"|" " >
+|  < SEMICOLON : ";" >
+| < LEFT_PAREN : "(" >
+| < RIGHT_PAREN : ")" >
+| < COMMA : "," >
+| < UNDERSCORE : "_" >
+| < INT_VALUE : (< SIGN >)? (< DIGIT >)+>
+| < DATE_VALUE : < NNNN > "-" < NN > "-" < NN > >
+| < CHAR_STRING : < QUOTE > (< NON_QUOTE_CHARACTER >)* < QUOTE > >
+| < QUOTE : "'" >
+| < #SIGN : "+" | "-" >
+| < #DIGIT : [ "0"-"9" ] >
+| < LEGAL_IDENTIFIER : < ALPHABET > (< ALPHABET > | < UNDERSCORE >)* >
+| < #ALPHABET : [ "a"-"z", "A"-"Z" ] >
+| < #NNNN : < DIGIT > < DIGIT > < DIGIT > < DIGIT > >
+| < #NN : < DIGIT > < DIGIT > >
+| < #NON_QUOTE_CHARACTER : < DIGIT > | < ALPHABET > | < NON_QUOTE_SPECIAL_CHARACTERS > >
+| < NEWLINE: < SEMICOLON > (" "  | "\t" | "\r" )* "\n" >
+}
+
+void command() :
+{}
+{
+  queryList()
+| (
+    // 유저의 입력에 대한 출력을 prompt 출력 없이(마지막 줄만 있도록) 하기 위한 LOOKAHEAD 처리
+    < EXIT >
+    (
+      LOOKAHEAD(<NEWLINE>)
+      <NEWLINE> | < SEMICOLON >
+    )
+    {
+      System.exit(0);
+    }
+  )
+}
+
+/**
+* 유저의 Query List 입력 ( queries .... + "\n")을 처리한다.
+*/
+void queryList() :
+{
+    String q;
+}
+{
+  (
+    q = query()
+    (
+      LOOKAHEAD(<NEWLINE>)
+      <NEWLINE>
+      {
+        printMessage(q, true);
+      }
+      |
+      < SEMICOLON >
+      {
+        printMessage(q, false);
+      }
+    )
+  )+
+}
+
+String query() :
+{
+  String message;
+}
+{
+    (
+        message = createTableQuery() |
+        message = dropTableQuery() |
+        message = descTableQuery() |
+        message = showTableQuery()
+//        insertQuery()
+//        {
+//            q = PRINT_INSERT_QUERY;
+//        } |
+//        deleteQuery()
+//        {
+//            q = PRINT_DELETE_QUERY;
+//        } |
+//        selectQuery()
+//        {
+//            q = PRINT_SELECT_QUERY;
+//        }
+    )
+
+    { return message; }
+}
+
+String createTableQuery() :
+{
+    TableDefinition tableInfo;
+    TableDefinition.Builder builder = new TableDefinition.Builder();
+    String _tableName;
+    String message;
+}
+{
+    < CREATE >
+    < TABLE >
+    _tableName = tableName()
+    tableElementList(builder)
+
+    {
+        try {
+            tableInfo = builder
+                .setTableName(_tableName)
+                .create();
+            dbManager.createSchema(tableInfo);
+
+            message = String.format("'%s' table is created", _tableName);
+        } catch (DefinitionError e) {
+            message = e.getMessage();
+        }
+        return message;
+    }
+}
+
+
+String dropTableQuery() :
+{
+    String message;
+    String _tableName;
+}
+{
+    < DROP > < TABLE >
+    _tableName = tableName()
+
+    {
+        try {
+            dbManager.dropSchema(_tableName);
+            message = String.format("'%s' table is dropped", _tableName);
+        } catch (DefinitionError e) {
+            message = e.getMessage();
+        }
+        return message;
+    }
+}
+
+String descTableQuery() :
+{
+    String _tableName;
+    String message;
+}
+{
+    < DESC >
+      _tableName = tableName()
+    {
+        try {
+            message = dbManager.getSchema(_tableName).toString();
+        } catch (NoSuchTableError e) {
+            message = e.getMessage();
+        }
+        return message;
+    }
+}
+
+String showTableQuery() :
+{
+    String message;
+}
+{
+    < SHOW > < TABLES >
+    {
+        List<String> names = dbManager.getTableNames();
+        if (names.isEmpty()) {
+            message = "There is no table";
+        } else {
+            message = "----------------\n";
+            message += String.join("\n", names);
+            message += "\n----------------";
+        }
+        return message;
+    }
+}
+
+void insertQuery() :
+{}
+{
+  < INSERT > < INTO >
+  tableName()
+  insertColumnsAndSource()
+}
+
+void deleteQuery() :
+{}
+{
+  < DELETE > < FROM >
+  tableName()
+  [whereClause()]
+}
+
+void selectQuery() :
+{}
+{
+  < SELECT >
+  selectList()
+  tableExpression()
+}
+
+void selectList() :
+{}
+{
+  < ASTERISK >
+  | selectedColumn() (< COMMA > selectedColumn())*
+}
+
+void selectedColumn() :
+{}
+{
+  // table name column name에 선점 당하는 것을 막기 위한 LOOKAHEAD 처리
+  [ LOOKAHEAD(2) tableName() < PERIOD >]
+  columnName()
+  [ < AS > columnName() ]
+}
+
+void tableExpression() :
+{}
+{
+  fromClause()
+  [ whereClause() ]
+}
+
+void fromClause() :
+{}
+{
+  < FROM >
+  tableReferenceList()
+}
+
+void tableReferenceList() :
+{}
+{
+  referedTable()
+  (< COMMA > referedTable())*
+}
+
+void referedTable() :
+{}
+{
+  tableName()
+  [ < AS > tableName()]
+}
+
+void whereClause() :
+{}
+{
+  < WHERE >
+  booleanValueExpression()
+}
+
+void booleanValueExpression() :
+{}
+{
+  booleanTerm()
+  ( < OR > booleanTerm())*
+}
+
+void booleanTerm() :
+{}
+{
+  booleanFactor()
+  ( < AND > booleanFactor())*
+}
+
+void booleanFactor() :
+{}
+{
+  [< NOT >]
+  booleanTest()
+}
+
+void booleanTest() :
+{}
+{
+  predicate() |
+  parenthesizedBooleanExpression()
+}
+
+void parenthesizedBooleanExpression() :
+{}
+{
+  < LEFT_PAREN >
+  booleanValueExpression()
+  < RIGHT_PAREN >
+}
+
+void predicate() :
+{}
+{
+  // Comparison Predicate이 Null Predicate에 선점당하는 것을 막기 위한 LOOKAHEAD 처리
+  LOOKAHEAD(4)
+  comparisonPredicate()
+  | nullPredicate()
+}
+
+void comparisonPredicate() :
+{}
+{
+  compOperand()
+  compOp()
+  compOperand()
+}
+
+void compOperand() :
+{}
+{
+  // table name과 column name에 선점 당하는 것을 막기 위한 LOOKAHEAD 처리
+  comparableValue()
+  | [ LOOKAHEAD(2) tableName() < PERIOD > ] columnName()
+}
+
+void compOp() :
+{}
+{
+  < INEQ_S > |
+  < INEQ_SE > |
+  < INEQ_B > |
+  < INEQ_BE > |
+  < INEQ_E > |
+  < INEQ_NE >
+}
+
+void comparableValue() :
+{}
+{
+  < INT_VALUE > |
+  < CHAR_STRING > |
+  < DATE_VALUE >
+}
+
+void nullPredicate() :
+{}
+{
+  // table name이 column name에 선점 당하는 것을 막기 위한 LOOKAHEAD 처리
+  [ LOOKAHEAD(2) tableName() < PERIOD > ]
+  columnName()
+  nullOperation()
+}
+
+void nullOperation() :
+{}
+{
+  < IS > ( < NOT_NULL > | < NULL > )
+}
+
+void tableElementList(TableDefinition.Builder builder) :
+{
+}
+{
+    < LEFT_PAREN > tableElement(builder)
+    ( < COMMA > tableElement(builder) )*
+    < RIGHT_PAREN >
+}
+
+void tableElement(TableDefinition.Builder builder) :
+{
+    ColumnDefinition column;
+}
+{
+  column = columnDefinition() { builder.addColumn(column); }
+| tableConstraintDefinition(builder)
+}
+
+ColumnDefinition columnDefinition() :
+{
+    ColumnDefinition.Builder columnBuilder = new ColumnDefinition.Builder();
+    String columnName;
+    DataTypeDefinition dataType;
+}
+{
+    columnName = columnName() { columnBuilder.setColumnName(columnName); }
+    dataType = dataType() { columnBuilder.setDataType(dataType); }
+    ( < NOT_NULL > { columnBuilder.setConstraint("not null"); } )?
+    { return columnBuilder.create(); }
+}
+
+void tableConstraintDefinition(TableDefinition.Builder builder) :
+{
+    ForeignKeyDefinition foreignKeyDefinition;
+    ArrayList<String> primaryKeyList;
+}
+{
+    primaryKeyList = primaryKeyConstraint() { builder.setPrimaryKeys(primaryKeyList); } |
+    foreignKeyDefinition = referentialConstraint() { builder.addForeignKey(foreignKeyDefinition); }
+}
+
+ArrayList<String> primaryKeyConstraint() :
+{
+    ArrayList<String> compositePk;
+}
+{
+  < PRIMARY > < KEY >
+  compositePk = columnNameList()
+  { return compositePk; }
+}
+
+ForeignKeyDefinition referentialConstraint() :
+{
+    ForeignKeyDefinition.Builder fbuilder = new ForeignKeyDefinition.Builder();
+    String _referencedTableName;
+    ArrayList<String> _referencedColumn;
+    ArrayList<String> _referencingColumn;
+}
+{
+  < FOREIGN > < KEY >
+  _referencingColumn = columnNameList() { fbuilder.setReferencingColumn(_referencingColumn); }
+  < REFERENCES >
+  _referencedTableName = tableName() { fbuilder.setReferencedTableName(_referencedTableName); }
+  _referencedColumn = columnNameList() { fbuilder.setReferencedColumn(_referencedColumn);   return fbuilder.create(); }
+}
+
+void insertColumnsAndSource() :
+{}
+{
+  [columnNameList()]
+  valueList()
+
+}
+
+void valueList() :
+{}
+{
+  < VALUES >
+  < LEFT_PAREN >
+  value()
+  (
+    < COMMA >
+    value()
+  )*
+  < RIGHT_PAREN >
+}
+
+ArrayList<String> columnNameList() :
+{
+    ArrayList<String> _columnNameList = new ArrayList<String>();
+    String _columnName;
+}
+{
+    < LEFT_PAREN >
+    _columnName = columnName() { _columnNameList.add(_columnName); }
+    (
+        < COMMA >
+        _columnName = columnName() { _columnNameList.add(_columnName); }
+    )*
+    < RIGHT_PAREN >
+    { return _columnNameList; }
+}
+
+DataTypeDefinition dataType() :
+{
+    DataType _dataType;
+    int _charLength = 0;
+    Token temp;
+}
+{
+    (
+        < INT > { _dataType = DataType.INTEGER; } |
+        < CHAR > < LEFT_PAREN > temp = < INT_VALUE > < RIGHT_PAREN > { _dataType = DataType.CHARACTER; _charLength = Integer.parseInt(temp.image); } |
+        < DATE > { _dataType = DataType.DATE; }
+    )
+    { return new DataTypeDefinition(_dataType, _charLength); }
+}
+
+String tableName() :
+{
+    Token _tableName;
+}
+{
+    _tableName = < LEGAL_IDENTIFIER >
+    {
+        return _tableName.toString();
+    }
+}
+
+String columnName() :
+{
+    Token _columnName;
+}
+{
+    _columnName = < LEGAL_IDENTIFIER >
+    { return _columnName.toString(); }
+}
+
+void value() :
+{}
+{
+  < NULL > |
+  comparableValue()
+}
