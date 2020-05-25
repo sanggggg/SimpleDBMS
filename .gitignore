@@ -49,7 +49,7 @@ cmake-build-*/
 *.iws
 
 # IntelliJ
-out/
+.out/
 
 # mpeltonen/sbt-idea plugin
 .idea_modules/
@@ -174,7 +174,7 @@ modules.xml
 hs_err_pid*
 
 ### Maven ###
-target/
+.target
 pom.xml.tag
 pom.xml.releaseBackup
 pom.xml.versionsBackup
