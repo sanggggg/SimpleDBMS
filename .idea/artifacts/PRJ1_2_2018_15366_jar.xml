@@ -3,6 +3,7 @@
     <output-path>$PROJECT_DIR$/out/artifacts/PRJ1_2_2018_15366_jar</output-path>
     <root id="archive" name="PRJ1-2_2018-15366.jar">
       <element id="module-output" name="PRJ1-2_2018-15366" />
+      <element id="extracted-dir" path="$PROJECT_DIR$/lib/je-7.5.11.jar" path-in-jar="/" />
     </root>
   </artifact>
 </component>

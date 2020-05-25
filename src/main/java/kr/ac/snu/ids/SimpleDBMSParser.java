@@ -54,32 +54,6 @@ public class SimpleDBMSParser implements SimpleDBMSParserConstants {
     * lastLine은 유저의 queryList 입력이 끝난 경우 true이며 이때 콘솔에 prompt를 출력한다.
     */
     public static void printMessage(String q, boolean lastLine) {
-//        switch(q) {
-//            case PRINT_SYNTAX_ERROR:
-//                System.out.println("Syntax error");
-//                break;
-//            case PRINT_CREATE_TABLE:
-//                System.out.println("'CREATE TABLE' requested");
-//                break;
-//            case PRINT_DROP_TABLE:
-//                System.out.println("'DROP TABLE' requested");
-//                break;
-//            case PRINT_DESC:
-//                System.out.println("'DESC' requested");
-//                break;
-//            case PRINT_SHOW_TABLES:
-//                System.out.println("'SHOW TABLES' requested");
-//                break;
-//            case PRINT_INSERT_QUERY:
-//                System.out.println("'INSERT' requested");
-//                break;
-//            case PRINT_DELETE_QUERY:
-//                System.out.println("'DELETE' requested");
-//                break;
-//            case PRINT_SELECT_QUERY:
-//                System.out.println("'SELECT' requested");
-//            break;
-//        }
         System.out.println(q);
         if (lastLine)
             System.out.print("DB_2018-15366> ");
@@ -110,8 +84,7 @@ public class SimpleDBMSParser implements SimpleDBMSParserConstants {
           throw new ParseException();
         }
       }
-System.out.println("FUCK");
-          BerKeleyDB.closeDatabase();
+BerKeleyDB.closeDatabase();
           System.exit(0);
       break;
       }
