@@ -110,7 +110,9 @@ public class SimpleDBMSParser implements SimpleDBMSParserConstants {
           throw new ParseException();
         }
       }
-System.exit(0);
+System.out.println("FUCK");
+          BerKeleyDB.closeDatabase();
+          System.exit(0);
       break;
       }
     default:
@@ -863,6 +865,22 @@ _dataType = DataType.DATE;
     finally { jj_save(5, xla); }
   }
 
+  static private boolean jj_3R_13()
+ {
+    if (jj_3R_15()) return true;
+    return false;
+  }
+
+  static private boolean jj_3R_11()
+ {
+    Token xsp;
+    xsp = jj_scanpos;
+    if (!jj_3R_13()) return false;
+    jj_scanpos = xsp;
+    if (jj_3R_14()) return true;
+    return false;
+  }
+
   static private boolean jj_3_3()
  {
     if (jj_3R_9()) return true;
@@ -958,22 +976,6 @@ _dataType = DataType.DATE;
   static private boolean jj_3R_9()
  {
     if (jj_scan_token(LEGAL_IDENTIFIER)) return true;
-    return false;
-  }
-
-  static private boolean jj_3R_13()
- {
-    if (jj_3R_15()) return true;
-    return false;
-  }
-
-  static private boolean jj_3R_11()
- {
-    Token xsp;
-    xsp = jj_scanpos;
-    if (!jj_3R_13()) return false;
-    jj_scanpos = xsp;
-    if (jj_3R_14()) return true;
     return false;
   }
 

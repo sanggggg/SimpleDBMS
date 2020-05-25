@@ -171,17 +171,15 @@ void command() :
 {}
 {
   queryList()
-| (
-    // 유저의 입력에 대한 출력을 prompt 출력 없이(마지막 줄만 있도록) 하기 위한 LOOKAHEAD 처리
-    < EXIT >
-    (
-      LOOKAHEAD(<NEWLINE>)
-      <NEWLINE> | < SEMICOLON >
-    )
-    {
-      System.exit(0);
-    }
-  )
+| < EXIT >
+(
+    LOOKAHEAD(<NEWLINE>)
+  <NEWLINE> | < SEMICOLON >
+)
+  {
+          BerKeleyDB.closeDatabase();
+          System.exit(0);
+  }
 }
 
 /**

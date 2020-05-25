@@ -31,7 +31,7 @@ public class BerKeleyDB {
         return INSTANCE;
     }
 
-    public static synchronized void closeDatabase() {
+    public static void closeDatabase() {
         if (INSTANCE != null) {
             INSTANCE.close();
             envDb.close();
