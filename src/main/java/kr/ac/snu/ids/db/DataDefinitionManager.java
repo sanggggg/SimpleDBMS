@@ -6,18 +6,17 @@ import kr.ac.snu.ids.definition.DataType;
 import kr.ac.snu.ids.definition.ForeignKeyDefinition;
 import kr.ac.snu.ids.definition.TableDefinition;
 import kr.ac.snu.ids.exceptions.CharLengthError;
-import kr.ac.snu.ids.exceptions.create.*;
 import kr.ac.snu.ids.exceptions.NoSuchTableError;
+import kr.ac.snu.ids.exceptions.create.*;
 import kr.ac.snu.ids.exceptions.drop.DropReferencedTableError;
 import kr.ac.snu.ids.exceptions.drop.DropTableError;
-import org.relaxng.datatype.Datatype;
 
 import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
 public class DataDefinitionManager {
@@ -91,7 +90,7 @@ public class DataDefinitionManager {
 
     private boolean validateSchema(TableDefinition tableDefinition) throws CreateTableError {
         try (Cursor cursor = db.openCursor(null, null)) {
-            DatabaseEntry targetKey = new DatabaseEntry(tableDefinition.getTableName().getBytes("UTF-8"));
+            DatabaseEntry targetKey = new DatabaseEntry(tableDefinition.getTableName().getBytes(StandardCharsets.UTF_8));
             DatabaseEntry dataBody = new DatabaseEntry();
 
             // Char 타입의 길이가 1보다 작음
@@ -104,7 +103,7 @@ public class DataDefinitionManager {
 
             // column 이름 중복
             List<String> columnNames = tableDefinition.getColumnList().stream().map(ColumnDefinition::getColumnName).collect(Collectors.toList());
-            Set<String> uniqueNames = new HashSet<String>(columnNames);
+            Set<String> uniqueNames = new HashSet<>(columnNames);
             if (uniqueNames.size() < columnNames.size())
                 throw new DuplicateColumnDefError();
 
@@ -140,8 +139,6 @@ public class DataDefinitionManager {
                     item.setConstraint("not null");
                 }
             }
-        } catch (IOException e) {
-            e.printStackTrace();
         }
 
 
@@ -149,7 +146,7 @@ public class DataDefinitionManager {
     }
 
     public void createSchema(TableDefinition tableDefinition) {
-        byte[] serializeSchema = null;
+        byte[] serializeSchema;
 
         validateSchema(tableDefinition);
         try (Cursor cursor = db.openCursor(null, null)) {
@@ -158,7 +155,7 @@ public class DataDefinitionManager {
             oos.writeObject(tableDefinition);
             serializeSchema = baos.toByteArray();
 
-            DatabaseEntry key = new DatabaseEntry(tableDefinition.getTableName().getBytes("UTF-8"));
+            DatabaseEntry key = new DatabaseEntry(tableDefinition.getTableName().getBytes(StandardCharsets.UTF_8));
             DatabaseEntry value = new DatabaseEntry(serializeSchema);
 
             cursor.put(key, value);
@@ -170,7 +167,7 @@ public class DataDefinitionManager {
     public void dropSchema(String tableName) throws NoSuchTableError, DropTableError {
 
         try (Cursor cursor = db.openCursor(null, null)) {
-            DatabaseEntry targetKey = new DatabaseEntry(tableName.getBytes("UTF-8"));
+            DatabaseEntry targetKey = new DatabaseEntry(tableName.getBytes(StandardCharsets.UTF_8));
             DatabaseEntry dataBody = new DatabaseEntry();
             if (cursor.get(targetKey, dataBody, Get.SEARCH, null) == null)
                 throw new NoSuchTableError();
@@ -200,7 +197,7 @@ public class DataDefinitionManager {
         TableDefinition tableDefinition = null;
 
         try (Cursor cursor = db.openCursor(null, null)) {
-            DatabaseEntry searchKey = new DatabaseEntry(tableName.getBytes("UTF-8"));
+            DatabaseEntry searchKey = new DatabaseEntry(tableName.getBytes(StandardCharsets.UTF_8));
             DatabaseEntry dataBody = new DatabaseEntry();
 
             if (cursor.get(searchKey, dataBody, Get.SEARCH, null) == null)
@@ -214,20 +211,18 @@ public class DataDefinitionManager {
     }
 
     public List<String> getTableNames() {
-        List<String> tables = new ArrayList<String>();
+        List<String> tables = new ArrayList<>();
 
-        try (Cursor iter = db.openCursor(null, null);) {
+        try (Cursor iter = db.openCursor(null, null)) {
             DatabaseEntry iterKey = new DatabaseEntry();
             DatabaseEntry iterData = new DatabaseEntry();
 
             if (iter.getFirst(iterKey, iterData, LockMode.DEFAULT) != OperationStatus.NOTFOUND) {
                 do {
-                    String keyName = new String(iterKey.getData(), "UTF-8");
+                    String keyName = new String(iterKey.getData(), StandardCharsets.UTF_8);
                     tables.add(keyName);
                 } while (iter.getNext(iterKey, iterData, LockMode.DEFAULT) == OperationStatus.SUCCESS);
             }
-        } catch (UnsupportedEncodingException e) {
-            e.printStackTrace();
         }
         return tables;
     }
