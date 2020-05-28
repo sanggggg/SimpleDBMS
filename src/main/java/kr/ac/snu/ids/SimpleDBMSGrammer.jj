@@ -16,6 +16,7 @@ import kr.ac.snu.ids.definition.*;
 import kr.ac.snu.ids.exceptions.DefinitionError;
 import kr.ac.snu.ids.exceptions.create.CreateTableError;
 import kr.ac.snu.ids.exceptions.NoSuchTableError;
+import kr.ac.snu.ids.query.InsertQuery;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -216,8 +217,8 @@ String query() :
         message = createTableQuery() |
         message = dropTableQuery() |
         message = descTableQuery() |
-        message = showTableQuery()
-//        insertQuery()
+        message = showTableQuery() |
+        message = insertQuery()
 //        {
 //            q = PRINT_INSERT_QUERY;
 //        } |
@@ -320,12 +321,20 @@ String showTableQuery() :
     }
 }
 
-void insertQuery() :
-{}
+String insertQuery() :
 {
-  < INSERT > < INTO >
-  tableName()
-  insertColumnsAndSource()
+    InsertQuery.Builder builder = new InsertQuery.Builder();
+    String _tableName;
+}
+{
+    < INSERT > < INTO >
+    _tableName = tableName()
+    insertColumnsAndSource(builder)
+    {
+        builder.setTableName(_tableName);
+        System.out.println(builder.create().toString());
+        return "The row is inserted";
+    }
 }
 
 void deleteQuery() :
@@ -467,12 +476,14 @@ void compOp() :
   < INEQ_NE >
 }
 
-void comparableValue() :
-{}
+String comparableValue() :
 {
-  < INT_VALUE > |
-  < CHAR_STRING > |
-  < DATE_VALUE >
+    Token t;
+}
+{
+    t = < INT_VALUE > { return t.toString(); } |
+    t = < CHAR_STRING > { return t.toString(); } |
+    t = < DATE_VALUE > { return t.toString(); }
 }
 
 void nullPredicate() :
@@ -556,25 +567,35 @@ ForeignKeyDefinition referentialConstraint() :
   _referencedColumn = columnNameList() { fbuilder.setReferencedColumn(_referencedColumn);   return fbuilder.create(); }
 }
 
-void insertColumnsAndSource() :
-{}
+void insertColumnsAndSource(InsertQuery.Builder builder) :
 {
-  [columnNameList()]
-  valueList()
-
+    ArrayList<String> _columnName = new ArrayList<String>();
+    ArrayList<String> _valueList;
+}
+{
+    [ _columnName = columnNameList()]
+    _valueList = valueList()
+    {
+        builder
+            .setColumnName(_columnName)
+            .setValueList(_valueList);
+    }
 }
 
-void valueList() :
-{}
+ArrayList<String> valueList() :
 {
-  < VALUES >
-  < LEFT_PAREN >
-  value()
-  (
-    < COMMA >
-    value()
-  )*
-  < RIGHT_PAREN >
+    ArrayList<String> _valueList = new ArrayList<>();
+    String _value;
+}
+{
+    < VALUES > < LEFT_PAREN >
+    _value = value() { _valueList.add(_value); }
+    (
+        < COMMA >
+        _value = value() { _valueList.add(_value); }
+    )*
+    < RIGHT_PAREN >
+    { return _valueList; }
 }
 
 ArrayList<String> columnNameList() :
@@ -628,9 +649,13 @@ String columnName() :
     { return _columnName.toString(); }
 }
 
-void value() :
-{}
+String value() :
 {
-  < NULL > |
-  comparableValue()
+    String _value;
+}
+{
+  < NULL > { _value = "NULL"; } |
+  _value = comparableValue()
+
+  { return _value; }
 }
