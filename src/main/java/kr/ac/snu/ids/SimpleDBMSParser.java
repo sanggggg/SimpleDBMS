@@ -3,6 +3,7 @@
 package kr.ac.snu.ids;
 
 import kr.ac.snu.ids.db.BerKeleyDB;
+import kr.ac.snu.ids.db.ComparableValue;
 import kr.ac.snu.ids.db.DataDefinitionManager;
 import kr.ac.snu.ids.db.QueryManager;
 import kr.ac.snu.ids.definition.*;
@@ -10,6 +11,7 @@ import kr.ac.snu.ids.exceptions.DefinitionError;
 import kr.ac.snu.ids.exceptions.NoSuchTableError;
 import kr.ac.snu.ids.query.InsertQuery;
 import kr.ac.snu.ids.query.SelectQuery;
+import kr.ac.snu.ids.query.predicate.*;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -166,52 +168,54 @@ printMessage(q, false);
             jj_consume_token(-1);
             throw new ParseException();
     }
-{if ("" != null) return message;}
-    throw new Error("Missing return statement in function");
-}
-
-  static final public String createTableQuery() throws ParseException {
-      TableDefinition tableInfo;
-      TableDefinition.Builder builder = new TableDefinition.Builder();
-      String _tableName;
-      String message;
-      jj_consume_token(CREATE);
-      jj_consume_token(TABLE);
-      _tableName = tableName();
-      tableElementList(builder);
-      try {
-          tableInfo = builder
-                  .setTableName(_tableName)
-                  .create();
-          DataDefinitionManager.createSchema(tableInfo);
-
-          message = String.format("'%s' table is created", _tableName);
-      } catch (DefinitionError e) {
-          message = e.getMessage();
-      }
       {
           if ("" != null) return message;
       }
       throw new Error("Missing return statement in function");
   }
 
-  static final public String dropTableQuery() throws ParseException {
-      String message;
-      String _tableName;
-      jj_consume_token(DROP);
-      jj_consume_token(TABLE);
-      _tableName = tableName();
-      try {
-          DataDefinitionManager.dropSchema(_tableName);
-          message = String.format("'%s' table is dropped", _tableName);
-      } catch (DefinitionError e) {
-          message = e.getMessage();
-      }
-      {
-          if ("" != null) return message;
-      }
-      throw new Error("Missing return statement in function");
-  }
+    static final public String createTableQuery() throws ParseException {
+        TableDefinition tableInfo;
+        TableDefinition.Builder builder = new TableDefinition.Builder();
+        String _tableName;
+        String message;
+        jj_consume_token(CREATE);
+        jj_consume_token(TABLE);
+        _tableName = tableName();
+        tableElementList(builder);
+        try {
+            tableInfo = builder
+                    .setTableName(_tableName)
+                    .create();
+            DataDefinitionManager.createSchema(tableInfo);
+
+            message = String.format("'%s' table is created", _tableName);
+        } catch (DefinitionError e) {
+            message = e.getMessage();
+        }
+        {
+            if ("" != null) return message;
+        }
+        throw new Error("Missing return statement in function");
+    }
+
+    static final public String dropTableQuery() throws ParseException {
+        String message;
+        String _tableName;
+        jj_consume_token(DROP);
+        jj_consume_token(TABLE);
+        _tableName = tableName();
+        try {
+            DataDefinitionManager.dropSchema(_tableName);
+            message = String.format("'%s' table is dropped", _tableName);
+        } catch (DefinitionError e) {
+            message = e.getMessage();
+        }
+        {
+            if ("" != null) return message;
+        }
+        throw new Error("Missing return statement in function");
+    }
 
     static final public String descTableQuery() throws ParseException {
         String _tableName;
@@ -227,7 +231,7 @@ printMessage(q, false);
             if ("" != null) return message;
         }
         throw new Error("Missing return statement in function");
-  }
+    }
 
     static final public String showTableQuery() throws ParseException {
         String message;
@@ -288,13 +292,14 @@ printMessage(q, false);
         SelectQuery.Builder builder = new SelectQuery.Builder();
         List<String> _selectList;
         List<String> _tableReferenceList;
+        BooleanCondition _condition = null;
         jj_consume_token(SELECT);
         _selectList = selectList();
         jj_consume_token(FROM);
         _tableReferenceList = tableReferenceList();
         switch ((jj_ntk == -1) ? jj_ntk_f() : jj_ntk) {
             case WHERE: {
-                whereClause();
+                _condition = whereClause();
                 break;
             }
             default:
@@ -303,6 +308,7 @@ printMessage(q, false);
         }
         SelectQuery query = builder.setSelectColumnList(_selectList)
                 .setTableReferenceList(_tableReferenceList)
+                .setCondition(_condition)
                 .create();
         System.out.println(query.toString());
         {
@@ -428,189 +434,260 @@ printMessage(q, false);
         throw new Error("Missing return statement in function");
     }
 
-    static final public void whereClause() throws ParseException {
+    static final public BooleanCondition whereClause() throws ParseException {
+        BooleanCondition _cond;
         jj_consume_token(WHERE);
-        booleanValueExpression();
+        _cond = booleanValueExpression();
+        {
+            if ("" != null) return _cond;
+        }
+        throw new Error("Missing return statement in function");
     }
 
-    static final public void booleanValueExpression() throws ParseException {
-        booleanTerm();
+    static final public BooleanCondition booleanValueExpression() throws ParseException {
+        BooleanValueExpression _expression = new BooleanValueExpression();
+        BooleanCondition _cond;
+        _cond = booleanTerm();
+        _expression.addTerm(_cond);
         label_4:
         while (true) {
-      switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
-      case OR:{
-        ;
-        break;
+            switch ((jj_ntk == -1) ? jj_ntk_f() : jj_ntk) {
+                case OR: {
+                    ;
+                    break;
+                }
+                default:
+                    jj_la1[12] = jj_gen;
+                    break label_4;
+            }
+            jj_consume_token(OR);
+            _cond = booleanTerm();
+            _expression.addTerm(_cond);
         }
-      default:
-        jj_la1[12] = jj_gen;
-        break label_4;
-      }
-      jj_consume_token(OR);
-      booleanTerm();
+        {
+            if ("" != null) return _expression;
+        }
+        throw new Error("Missing return statement in function");
     }
-}
 
-  static final public void booleanTerm() throws ParseException {
-    booleanFactor();
-    label_5:
-    while (true) {
-      switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
-      case AND:{
-        ;
-        break;
+    static final public BooleanCondition booleanTerm() throws ParseException {
+        BooleanTerm _term = new BooleanTerm();
+        BooleanCondition _cond;
+        _cond = booleanFactor();
+        _term.addFactor(_cond);
+        label_5:
+        while (true) {
+            switch ((jj_ntk == -1) ? jj_ntk_f() : jj_ntk) {
+                case AND: {
+                    ;
+                    break;
+                }
+                default:
+                    jj_la1[13] = jj_gen;
+                    break label_5;
+            }
+            jj_consume_token(AND);
+            _cond = booleanFactor();
+            _term.addFactor(_cond);
         }
-      default:
-        jj_la1[13] = jj_gen;
-        break label_5;
-      }
-      jj_consume_token(AND);
-      booleanFactor();
+        {
+            if ("" != null) return _term;
+        }
+        throw new Error("Missing return statement in function");
     }
-}
 
-  static final public void booleanFactor() throws ParseException {
-    switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
-    case NOT:{
-      jj_consume_token(NOT);
-      break;
-      }
-    default:
-      jj_la1[14] = jj_gen;
-      ;
+    static final public BooleanCondition booleanFactor() throws ParseException {
+        BooleanFactor _factor = new BooleanFactor();
+        BooleanCondition _cond;
+        _factor.setNot(false);
+        switch ((jj_ntk == -1) ? jj_ntk_f() : jj_ntk) {
+            case NOT: {
+                jj_consume_token(NOT);
+                _factor.setNot(true);
+                break;
+            }
+            default:
+                jj_la1[14] = jj_gen;
+                ;
+        }
+        _cond = booleanTest();
+        _factor.setTest(_cond);
+        {
+            if ("" != null) return _factor;
+        }
+        throw new Error("Missing return statement in function");
     }
-    booleanTest();
-}
 
-  static final public void booleanTest() throws ParseException {
-    switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
-    case INT_VALUE:
-    case DATE_VALUE:
-    case CHAR_STRING:
-    case LEGAL_IDENTIFIER:{
-      predicate();
-      break;
-      }
-    case LEFT_PAREN:{
-      parenthesizedBooleanExpression();
-      break;
-      }
-    default:
-      jj_la1[15] = jj_gen;
-      jj_consume_token(-1);
-      throw new ParseException();
+    static final public BooleanCondition booleanTest() throws ParseException {
+        BooleanCondition _cond;
+        switch ((jj_ntk == -1) ? jj_ntk_f() : jj_ntk) {
+            case INT_VALUE:
+            case DATE_VALUE:
+            case CHAR_STRING:
+            case LEGAL_IDENTIFIER: {
+                _cond = predicate();
+                break;
+            }
+            case LEFT_PAREN: {
+                _cond = parenthesizedBooleanExpression();
+                break;
+            }
+            default:
+                jj_la1[15] = jj_gen;
+                jj_consume_token(-1);
+                throw new ParseException();
+        }
+        {
+            if ("" != null) return _cond;
+        }
+        throw new Error("Missing return statement in function");
     }
-}
 
-  static final public void parenthesizedBooleanExpression() throws ParseException {
-    jj_consume_token(LEFT_PAREN);
-    booleanValueExpression();
-    jj_consume_token(RIGHT_PAREN);
-}
-
-  static final public void predicate() throws ParseException {
-    if (jj_2_4(4)) {
-      comparisonPredicate();
-    } else {
-      switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
-      case LEGAL_IDENTIFIER:{
-        nullPredicate();
-        break;
+    static final public BooleanCondition parenthesizedBooleanExpression() throws ParseException {
+        BooleanCondition _cond;
+        jj_consume_token(LEFT_PAREN);
+        _cond = booleanValueExpression();
+        jj_consume_token(RIGHT_PAREN);
+        {
+            if ("" != null) return _cond;
         }
-      default:
-        jj_la1[16] = jj_gen;
-        jj_consume_token(-1);
-        throw new ParseException();
-      }
+        throw new Error("Missing return statement in function");
     }
-}
 
-  static final public void comparisonPredicate() throws ParseException {
-    compOperand();
-    compOp();
-    compOperand();
-}
-
-  static final public void compOperand() throws ParseException {
-    switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
-    case INT_VALUE:
-    case DATE_VALUE:
-    case CHAR_STRING:{
-      comparableValue();
-      break;
-      }
-    case LEGAL_IDENTIFIER:{
-      if (jj_2_5(2)) {
-        tableName();
-        jj_consume_token(PERIOD);
-      } else {
-        ;
-      }
-      columnName();
-      break;
-      }
-    default:
-      jj_la1[17] = jj_gen;
-      jj_consume_token(-1);
-      throw new ParseException();
+    static final public BooleanCondition predicate() throws ParseException {
+        BooleanCondition _cond;
+        if (jj_2_4(4)) {
+            _cond = comparisonPredicate();
+        } else {
+            switch ((jj_ntk == -1) ? jj_ntk_f() : jj_ntk) {
+                case LEGAL_IDENTIFIER: {
+                    _cond = nullPredicate();
+                    break;
+                }
+                default:
+                    jj_la1[16] = jj_gen;
+                    jj_consume_token(-1);
+                    throw new ParseException();
+            }
+        }
+        {
+            if ("" != null) return _cond;
+        }
+        throw new Error("Missing return statement in function");
     }
-}
 
-  static final public void compOp() throws ParseException {
-    switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
-        case INEQ_S: {
-            jj_consume_token(INEQ_S);
-            break;
+    static final public BooleanCondition comparisonPredicate() throws ParseException {
+        ComparisonPredicate _comp = new ComparisonPredicate();
+        ComparableValue left;
+        ComparableValue right;
+        String operator;
+        left = compOperand();
+        _comp.setLeft(left);
+        operator = compOp();
+        _comp.setOperator(operator);
+        right = compOperand();
+        _comp.setRight(right);
+        {
+            if ("" != null) return _comp;
         }
-        case INEQ_SE: {
-            jj_consume_token(INEQ_SE);
-            break;
-        }
-        case INEQ_B: {
-            jj_consume_token(INEQ_B);
-            break;
-        }
-        case INEQ_BE: {
-            jj_consume_token(INEQ_BE);
-            break;
-        }
-        case INEQ_E: {
-            jj_consume_token(INEQ_E);
-            break;
-        }
-        case INEQ_NE: {
-            jj_consume_token(INEQ_NE);
-            break;
-        }
-        default:
-            jj_la1[18] = jj_gen;
-            jj_consume_token(-1);
-            throw new ParseException();
+        throw new Error("Missing return statement in function");
     }
-  }
 
-    static final public String comparableValue() throws ParseException {
+    static final public ComparableValue compOperand() throws ParseException {
+        ComparableValue _val;
+        String _tableName;
+        String _columnName;
+        String tabcol = "";
+        switch ((jj_ntk == -1) ? jj_ntk_f() : jj_ntk) {
+            case INT_VALUE:
+            case DATE_VALUE:
+            case CHAR_STRING: {
+                _val = comparableValue();
+                break;
+            }
+            case LEGAL_IDENTIFIER: {
+                if (jj_2_5(2)) {
+                    _tableName = tableName();
+                    tabcol = _tableName.concat(".");
+                    jj_consume_token(PERIOD);
+                } else {
+                    ;
+                }
+                _columnName = columnName();
+                tabcol = tabcol.concat(_columnName);
+                _val = new ComparableValue(DataType.TABLECOL, tabcol);
+                break;
+            }
+            default:
+                jj_la1[17] = jj_gen;
+                jj_consume_token(-1);
+                throw new ParseException();
+        }
+        {
+            if ("" != null) return _val;
+        }
+        throw new Error("Missing return statement in function");
+    }
+
+    static final public String compOp() throws ParseException {
         Token t;
+        switch ((jj_ntk == -1) ? jj_ntk_f() : jj_ntk) {
+            case INEQ_S: {
+                t = jj_consume_token(INEQ_S);
+                break;
+            }
+            case INEQ_SE: {
+                t = jj_consume_token(INEQ_SE);
+                break;
+            }
+            case INEQ_B: {
+                t = jj_consume_token(INEQ_B);
+                break;
+            }
+            case INEQ_BE: {
+                t = jj_consume_token(INEQ_BE);
+                break;
+            }
+            case INEQ_E: {
+                t = jj_consume_token(INEQ_E);
+                break;
+            }
+            case INEQ_NE: {
+                t = jj_consume_token(INEQ_NE);
+                break;
+            }
+            default:
+                jj_la1[18] = jj_gen;
+                jj_consume_token(-1);
+                throw new ParseException();
+        }
+        {
+            if ("" != null) return t.toString();
+        }
+        throw new Error("Missing return statement in function");
+    }
+
+    static final public ComparableValue comparableValue() throws ParseException {
+        Token t;
+        ComparableValue _v;
         switch ((jj_ntk == -1) ? jj_ntk_f() : jj_ntk) {
             case INT_VALUE: {
                 t = jj_consume_token(INT_VALUE);
                 {
-                    if ("" != null) return "int'" + t.toString();
+                    if ("" != null) return new ComparableValue(DataType.INTEGER, t.toString());
                 }
                 break;
             }
             case CHAR_STRING: {
                 t = jj_consume_token(CHAR_STRING);
                 {
-                    if ("" != null) return "char'" + t.toString().replace("'", "");
+                    if ("" != null) return new ComparableValue(DataType.CHARACTER, t.toString().replace("'", ""));
                 }
                 break;
             }
             case DATE_VALUE: {
                 t = jj_consume_token(DATE_VALUE);
-                {
-                    if ("" != null) return "date'" + t.toString();
-                }
+                new ComparableValue(DataType.DATE, t.toString());
                 break;
             }
             default:
@@ -621,26 +698,44 @@ printMessage(q, false);
         throw new Error("Missing return statement in function");
     }
 
-    static final public void nullPredicate() throws ParseException {
+    static final public BooleanCondition nullPredicate() throws ParseException {
+        NullPredicate _nullpred = new NullPredicate();
+        String _tableName = null;
+        String _columnName;
+        Boolean _null;
         if (jj_2_6(2)) {
-            tableName();
+            _tableName = tableName();
             jj_consume_token(PERIOD);
         } else {
             ;
         }
-        columnName();
-        nullOperation();
+        _columnName = columnName();
+        _null = nullOperation();
+        _nullpred.setTableName(_tableName);
+        _nullpred.setColName(_columnName);
+        _nullpred.setNull(_null);
+
+        {
+            if ("" != null) return _nullpred;
+        }
+        throw new Error("Missing return statement in function");
     }
 
-    static final public void nullOperation() throws ParseException {
+    static final public Boolean nullOperation() throws ParseException {
         jj_consume_token(IS);
         switch ((jj_ntk == -1) ? jj_ntk_f() : jj_ntk) {
             case NOT_NULL: {
                 jj_consume_token(NOT_NULL);
+                {
+                    if ("" != null) return false;
+                }
                 break;
             }
             case NULL: {
                 jj_consume_token(NULL);
+                {
+                    if ("" != null) return true;
+                }
                 break;
             }
             default:
@@ -648,6 +743,7 @@ printMessage(q, false);
                 jj_consume_token(-1);
                 throw new ParseException();
         }
+        throw new Error("Missing return statement in function");
     }
 
     static final public void tableElementList(TableDefinition.Builder builder) throws ParseException {
@@ -663,26 +759,27 @@ printMessage(q, false);
                 default:
                     jj_la1[21] = jj_gen;
                     break label_6;
-      }
-      jj_consume_token(COMMA);
-      tableElement(builder);
+            }
+            jj_consume_token(COMMA);
+            tableElement(builder);
+        }
+        jj_consume_token(RIGHT_PAREN);
     }
-    jj_consume_token(RIGHT_PAREN);
-}
 
-  static final public void tableElement(TableDefinition.Builder builder) throws ParseException {ColumnDefinition column;
-    switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
-    case LEGAL_IDENTIFIER:{
-      column = columnDefinition();
-builder.addColumn(column);
-      break;
-      }
-    case PRIMARY:
-    case FOREIGN:{
-      tableConstraintDefinition(builder);
-      break;
-      }
-    default:
+    static final public void tableElement(TableDefinition.Builder builder) throws ParseException {
+        ColumnDefinition column;
+        switch ((jj_ntk == -1) ? jj_ntk_f() : jj_ntk) {
+            case LEGAL_IDENTIFIER: {
+                column = columnDefinition();
+                builder.addColumn(column);
+                break;
+            }
+            case PRIMARY:
+            case FOREIGN: {
+                tableConstraintDefinition(builder);
+                break;
+            }
+            default:
       jj_la1[22] = jj_gen;
       jj_consume_token(-1);
       throw new ParseException();
@@ -763,7 +860,7 @@ columnBuilder.setConstraint("not null");
 
     static final public void insertColumnsAndSource(InsertQuery.Builder builder) throws ParseException {
         ArrayList<String> _columnName = new ArrayList<String>();
-        ArrayList<String> _valueList;
+        ArrayList<ComparableValue> _valueList;
         switch ((jj_ntk == -1) ? jj_ntk_f() : jj_ntk) {
             case LEFT_PAREN: {
                 _columnName = columnNameList();
@@ -779,9 +876,9 @@ columnBuilder.setConstraint("not null");
                 .setValueList(_valueList);
     }
 
-    static final public ArrayList<String> valueList() throws ParseException {
-        ArrayList<String> _valueList = new ArrayList<>();
-        String _value;
+    static final public ArrayList<ComparableValue> valueList() throws ParseException {
+        ArrayList<ComparableValue> _valueList = new ArrayList<>();
+        ComparableValue _value;
         jj_consume_token(VALUES);
         jj_consume_token(LEFT_PAREN);
         _value = value();
@@ -889,12 +986,12 @@ columnBuilder.setConstraint("not null");
         throw new Error("Missing return statement in function");
     }
 
-    static final public String value() throws ParseException {
-        String _value;
+    static final public ComparableValue value() throws ParseException {
+        ComparableValue _value;
         switch ((jj_ntk == -1) ? jj_ntk_f() : jj_ntk) {
             case NULL: {
                 jj_consume_token(NULL);
-                _value = "null'null";
+                _value = new ComparableValue(DataType.CHARACTER, null);
                 break;
             }
             case INT_VALUE:
@@ -986,24 +1083,6 @@ columnBuilder.setConstraint("not null");
         }
     }
 
-    static private boolean jj_3R_9() {
-        if (jj_scan_token(LEGAL_IDENTIFIER)) return true;
-        return false;
-    }
-
-    static private boolean jj_3R_10() {
-        if (jj_3R_11()) return true;
-        if (jj_3R_12()) return true;
-        if (jj_3R_11()) return true;
-        return false;
-    }
-
-    static private boolean jj_3_6() {
-        if (jj_3R_9()) return true;
-        if (jj_scan_token(PERIOD)) return true;
-        return false;
-    }
-
     static private boolean jj_3R_12() {
         Token xsp;
         xsp = jj_scanpos;
@@ -1021,32 +1100,7 @@ columnBuilder.setConstraint("not null");
         return false;
     }
 
-    static private boolean jj_3_4() {
-        if (jj_3R_10()) return true;
-        return false;
-    }
-
-    static private boolean jj_3_5() {
-        if (jj_3R_9()) return true;
-        if (jj_scan_token(PERIOD)) return true;
-        return false;
-    }
-
-    static private boolean jj_3R_14() {
-        Token xsp;
-        xsp = jj_scanpos;
-        if (jj_3_5()) jj_scanpos = xsp;
-        if (jj_3R_16()) return true;
-        return false;
-    }
-
-    static private boolean jj_3_3() {
-        if (jj_3R_9()) return true;
-        if (jj_scan_token(PERIOD)) return true;
-        return false;
-    }
-
-    static private boolean jj_3R_16() {
+    static private boolean jj_3R_9() {
         if (jj_scan_token(LEGAL_IDENTIFIER)) return true;
         return false;
     }
@@ -1056,22 +1110,14 @@ columnBuilder.setConstraint("not null");
         return false;
     }
 
+    static private boolean jj_3_5() {
+        if (jj_3R_9()) return true;
+        if (jj_scan_token(PERIOD)) return true;
+        return false;
+    }
+
     static private boolean jj_3R_18() {
         if (jj_scan_token(CHAR_STRING)) return true;
-        return false;
-    }
-
-    static private boolean jj_3R_13() {
-        if (jj_3R_15()) return true;
-        return false;
-    }
-
-    static private boolean jj_3R_11() {
-        Token xsp;
-        xsp = jj_scanpos;
-        if (!jj_3R_13()) return false;
-        jj_scanpos = xsp;
-        if (jj_3R_14()) return true;
         return false;
     }
 
@@ -1091,6 +1137,52 @@ columnBuilder.setConstraint("not null");
         return false;
     }
 
+    static private boolean jj_3R_14() {
+        Token xsp;
+        xsp = jj_scanpos;
+        if (jj_3_5()) jj_scanpos = xsp;
+        if (jj_3R_16()) return true;
+        return false;
+    }
+
+    static private boolean jj_3R_10() {
+        if (jj_3R_11()) return true;
+        if (jj_3R_12()) return true;
+        if (jj_3R_11()) return true;
+        return false;
+    }
+
+    static private boolean jj_3R_13() {
+        if (jj_3R_15()) return true;
+        return false;
+    }
+
+    static private boolean jj_3_3() {
+        if (jj_3R_9()) return true;
+        if (jj_scan_token(PERIOD)) return true;
+        return false;
+    }
+
+    static private boolean jj_3_6() {
+        if (jj_3R_9()) return true;
+        if (jj_scan_token(PERIOD)) return true;
+        return false;
+    }
+
+    static private boolean jj_3R_16() {
+        if (jj_scan_token(LEGAL_IDENTIFIER)) return true;
+        return false;
+    }
+
+    static private boolean jj_3R_11() {
+        Token xsp;
+        xsp = jj_scanpos;
+        if (!jj_3R_13()) return false;
+        jj_scanpos = xsp;
+        if (jj_3R_14()) return true;
+        return false;
+    }
+
     static private boolean jj_3_1() {
         if (jj_scan_token(NEWLINE)) return true;
         return false;
@@ -1098,6 +1190,11 @@ columnBuilder.setConstraint("not null");
 
     static private boolean jj_3_2() {
         if (jj_scan_token(NEWLINE)) return true;
+        return false;
+    }
+
+    static private boolean jj_3_4() {
+        if (jj_3R_10()) return true;
         return false;
     }
 
@@ -1201,19 +1298,19 @@ columnBuilder.setConstraint("not null");
     public SimpleDBMSParser(java.io.Reader stream) {
         if (jj_initialized_once) {
             System.out.println("ERROR: Second call to constructor of static parser. ");
-	   System.out.println("	   You must either use ReInit() or set the JavaCC option STATIC to false");
-	   System.out.println("	   during parser generation.");
-	   throw new Error();
-	 }
-	 jj_initialized_once = true;
-	 jj_input_stream = new SimpleCharStream(stream, 1, 1);
-	 token_source = new SimpleDBMSParserTokenManager(jj_input_stream);
-	 token = new Token();
-	 jj_ntk = -1;
-	 jj_gen = 0;
-	 for (int i = 0; i < 30; i++) jj_la1[i] = -1;
-	 for (int i = 0; i < jj_2_rtns.length; i++) jj_2_rtns[i] = new JJCalls();
-  }
+            System.out.println("	   You must either use ReInit() or set the JavaCC option STATIC to false");
+            System.out.println("	   during parser generation.");
+            throw new Error();
+        }
+        jj_initialized_once = true;
+        jj_input_stream = new SimpleCharStream(stream, 1, 1);
+        token_source = new SimpleDBMSParserTokenManager(jj_input_stream);
+        token = new Token();
+        jj_ntk = -1;
+        jj_gen = 0;
+        for (int i = 0; i < 30; i++) jj_la1[i] = -1;
+        for (int i = 0; i < jj_2_rtns.length; i++) jj_2_rtns[i] = new JJCalls();
+    }
 
   /** Reinitialise. */
   static public void ReInit(java.io.Reader stream) {

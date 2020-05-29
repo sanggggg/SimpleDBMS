@@ -45,14 +45,9 @@ public class DataTypeDefinition implements Serializable {
 
     @Override
     public String toString() {
-        switch (dataType) {
-            case DATE:
-                return "date";
-            case INTEGER:
-                return "int";
-            case CHARACTER:
-                return "char(" + charLength + ")";
-        }
-        return null;
+        return "DataTypeDefinition{" +
+                "dataType=" + dataType +
+                ", charLength=" + charLength +
+                '}';
     }
 }

@@ -11,12 +11,16 @@ package kr.ac.snu.ids;
 
 import com.sleepycat.je.*;
 import kr.ac.snu.ids.db.BerKeleyDB;
+import kr.ac.snu.ids.db.ComparableValue;
 import kr.ac.snu.ids.db.DataDefinitionManager;
-import kr.ac.snu.ids.db.QueryManager;import kr.ac.snu.ids.definition.*;
+import kr.ac.snu.ids.db.QueryManager;
+import kr.ac.snu.ids.definition.*;
 import kr.ac.snu.ids.exceptions.DefinitionError;
 import kr.ac.snu.ids.exceptions.create.CreateTableError;
 import kr.ac.snu.ids.exceptions.NoSuchTableError;
-import kr.ac.snu.ids.query.InsertQuery;import kr.ac.snu.ids.query.SelectQuery;
+import kr.ac.snu.ids.query.InsertQuery;
+import kr.ac.snu.ids.query.SelectQuery;
+import kr.ac.snu.ids.query.predicate.*;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -298,7 +302,7 @@ String insertQuery() :
     {
         String message;
         try {
-            InsertQuery query =builder.setTableName(_tableName)
+            InsertQuery query = builder.setTableName(_tableName)
                 .create();
             QueryManager.insertQuery(query);
             message = "The row is inserted";
@@ -322,16 +326,18 @@ String selectQuery() :
     SelectQuery.Builder builder = new SelectQuery.Builder();
     List<String> _selectList;
     List<String> _tableReferenceList;
+    BooleanCondition _condition = null;
 }
 {
     < SELECT >
     _selectList = selectList()
     < FROM >
     _tableReferenceList = tableReferenceList()
-    [ whereClause() ]
+    [ _condition = whereClause() ]
     {
         SelectQuery query = builder.setSelectColumnList(_selectList)
             .setTableReferenceList(_tableReferenceList)
+            .setCondition(_condition)
             .create();
         System.out.println(query.toString());
         return "end select";
@@ -393,108 +399,174 @@ String referedTable() :
     { return _referedTable; }
 }
 
-void whereClause() :
-{}
+BooleanCondition whereClause() :
 {
-  < WHERE >
-  booleanValueExpression()
+    BooleanCondition _cond;
+}
+{
+    < WHERE >
+    _cond = booleanValueExpression()
+    { return _cond; }
 }
 
-void booleanValueExpression() :
-{}
+BooleanCondition booleanValueExpression() :
 {
-  booleanTerm()
-  ( < OR > booleanTerm())*
+    BooleanValueExpression _expression = new BooleanValueExpression();
+    BooleanCondition _cond;
+}
+{
+    (
+        _cond = booleanTerm() { _expression.addTerm(_cond); }
+        ( < OR > _cond = booleanTerm() { _expression.addTerm(_cond); })*
+    ) 
+    { return _expression; }
 }
 
-void booleanTerm() :
-{}
+BooleanCondition booleanTerm() :
 {
-  booleanFactor()
-  ( < AND > booleanFactor())*
+    BooleanTerm _term = new BooleanTerm();
+    BooleanCondition _cond;
+}
+{
+    (
+        _cond = booleanFactor() { _term.addFactor(_cond); } 
+        ( < AND > _cond = booleanFactor() { _term.addFactor(_cond); } )*    
+    )
+    { return _term; }
 }
 
-void booleanFactor() :
-{}
+BooleanCondition booleanFactor() :
 {
-  [< NOT >]
-  booleanTest()
+    BooleanFactor _factor = new BooleanFactor();
+    BooleanCondition _cond;
+    _factor.setNot(false);
+}
+{
+    [< NOT > { _factor.setNot(true); }]
+    _cond = booleanTest() { _factor.setTest(_cond); return _factor; }
 }
 
-void booleanTest() :
-{}
+BooleanCondition booleanTest() :
 {
-  predicate() |
-  parenthesizedBooleanExpression()
+    BooleanCondition _cond;
+}
+{
+    (
+        _cond = predicate() |
+        _cond = parenthesizedBooleanExpression()
+    ) { return _cond; }
 }
 
-void parenthesizedBooleanExpression() :
-{}
+BooleanCondition parenthesizedBooleanExpression() :
 {
-  < LEFT_PAREN >
-  booleanValueExpression()
-  < RIGHT_PAREN >
+    BooleanCondition _cond;
+}
+{
+    < LEFT_PAREN >
+    _cond = booleanValueExpression()
+    < RIGHT_PAREN >
+    { return _cond; }
 }
 
-void predicate() :
-{}
+BooleanCondition predicate() :
 {
-  // Comparison Predicate이 Null Predicate에 선점당하는 것을 막기 위한 LOOKAHEAD 처리
-  LOOKAHEAD(4)
-  comparisonPredicate()
-  | nullPredicate()
+    BooleanCondition _cond;
+}
+{
+    (
+        // Comparison Predicate이 Null Predicate에 선점당하는 것을 막기 위한 LOOKAHEAD 처리
+        LOOKAHEAD(4)
+        _cond = comparisonPredicate()
+        | _cond = nullPredicate()
+    )
+    { return _cond; }
 }
 
-void comparisonPredicate() :
-{}
+BooleanCondition comparisonPredicate() :
 {
-  compOperand()
-  compOp()
-  compOperand()
+    ComparisonPredicate _comp = new ComparisonPredicate();
+    ComparableValue left;
+    ComparableValue right;
+    String operator;
+}
+{
+    left = compOperand() { _comp.setLeft(left); }
+    operator = compOp() { _comp.setOperator(operator); }
+    right = compOperand() { _comp.setRight(right); }
+    { return _comp; }
 }
 
-void compOperand() :
-{}
+ComparableValue compOperand() :
 {
-  // table name과 column name에 선점 당하는 것을 막기 위한 LOOKAHEAD 처리
-  comparableValue()
-  | [ LOOKAHEAD(2) tableName() < PERIOD > ] columnName()
+    ComparableValue _val;
+    String _tableName;
+    String _columnName;
+    String tabcol = "";
+}
+{
+    // table name과 column name에 선점 당하는 것을 막기 위한 LOOKAHEAD 처리
+    (
+        _val = comparableValue()
+        | ([ LOOKAHEAD(2) _tableName = tableName() { tabcol = _tableName.concat("."); } < PERIOD > ] _columnName = columnName() { tabcol = tabcol.concat(_columnName); })
+        {
+            _val = new ComparableValue(DataType.TABLECOL, tabcol);
+        }
+    )
+    { return _val; }
 }
 
-void compOp() :
-{}
-{
-  < INEQ_S > |
-  < INEQ_SE > |
-  < INEQ_B > |
-  < INEQ_BE > |
-  < INEQ_E > |
-  < INEQ_NE >
-}
-
-String comparableValue() :
+String compOp() :
 {
     Token t;
 }
 {
-    t = < INT_VALUE > { return "int'" + t.toString(); } |
-    t = < CHAR_STRING > { return "char'" + t.toString().replace("'", ""); } |
-    t = < DATE_VALUE > { return "date'" + t.toString(); }
+    (
+        t = < INEQ_S > |
+        t = < INEQ_SE > |
+        t = < INEQ_B > |
+        t = < INEQ_BE > |
+        t = < INEQ_E > |
+        t = < INEQ_NE >
+    )
+    { return t.toString(); }
 }
 
-void nullPredicate() :
-{}
+ComparableValue comparableValue() :
 {
-  // table name이 column name에 선점 당하는 것을 막기 위한 LOOKAHEAD 처리
-  [ LOOKAHEAD(2) tableName() < PERIOD > ]
-  columnName()
-  nullOperation()
+    Token t;
+    ComparableValue _v;
+}
+{
+    t = < INT_VALUE > { return new ComparableValue(DataType.INTEGER, t.toString()); } |
+    t = < CHAR_STRING > { return new ComparableValue(DataType.CHARACTER, t.toString().replace("'", "")); } |
+    t = < DATE_VALUE > { new ComparableValue(DataType.DATE, t.toString()); }
 }
 
-void nullOperation() :
+BooleanCondition nullPredicate() :
+{
+    NullPredicate _nullpred = new NullPredicate();
+    String _tableName = null;
+    String _columnName;
+    Boolean _null;
+}
+{
+    // table name이 column name에 선점 당하는 것을 막기 위한 LOOKAHEAD 처리
+    [ LOOKAHEAD(2) _tableName = tableName() < PERIOD > ]
+    _columnName = columnName()
+    _null = nullOperation()
+    {
+        _nullpred.setTableName(_tableName);
+        _nullpred.setColName(_columnName);
+        _nullpred.setNull(_null);
+
+        return _nullpred;
+    }
+}
+
+Boolean nullOperation() :
 {}
 {
-  < IS > ( < NOT_NULL > | < NULL > )
+    < IS > ( < NOT_NULL > { return false; } | < NULL > { return true;} )
 }
 
 void tableElementList(TableDefinition.Builder builder) :
@@ -566,7 +638,7 @@ ForeignKeyDefinition referentialConstraint() :
 void insertColumnsAndSource(InsertQuery.Builder builder) :
 {
     ArrayList<String> _columnName = new ArrayList<String>();
-    ArrayList<String> _valueList;
+    ArrayList<ComparableValue> _valueList;
 }
 {
     [ _columnName = columnNameList()]
@@ -578,10 +650,10 @@ void insertColumnsAndSource(InsertQuery.Builder builder) :
     }
 }
 
-ArrayList<String> valueList() :
+ArrayList<ComparableValue> valueList() :
 {
-    ArrayList<String> _valueList = new ArrayList<>();
-    String _value;
+    ArrayList<ComparableValue> _valueList = new ArrayList<>();
+    ComparableValue _value;
 }
 {
     < VALUES > < LEFT_PAREN >
@@ -645,12 +717,12 @@ String columnName() :
     { return _columnName.toString(); }
 }
 
-String value() :
+ComparableValue value() :
 {
-    String _value;
+    ComparableValue _value;
 }
 {
-  < NULL > { _value = "null'null"; } |
+  < NULL > { _value = new ComparableValue(DataType.CHARACTER, null); } |
   _value = comparableValue()
 
   { return _value; }

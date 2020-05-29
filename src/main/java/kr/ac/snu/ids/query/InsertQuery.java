@@ -1,11 +1,13 @@
 package kr.ac.snu.ids.query;
 
+import kr.ac.snu.ids.db.ComparableValue;
+
 import java.util.List;
 
 public class InsertQuery {
     private String tableName;
     private List<String> columnName;
-    private List<String> valueList;
+    private List<ComparableValue> valueList;
 
     public String getTableName() {
         return tableName;
@@ -15,11 +17,11 @@ public class InsertQuery {
         return columnName;
     }
 
-    public List<String> getValueList() {
+    public List<ComparableValue> getValueList() {
         return valueList;
     }
 
-    public InsertQuery(String tableName, List<String> columnName, List<String> valueList) {
+    public InsertQuery(String tableName, List<String> columnName, List<ComparableValue> valueList) {
         this.tableName = tableName;
         this.columnName = columnName;
         this.valueList = valueList;
@@ -28,7 +30,7 @@ public class InsertQuery {
     public static class Builder {
         private String tableName;
         private List<String> columnName;
-        private List<String> valueList;
+        private List<ComparableValue> valueList;
 
         public Builder setTableName(String tableName) {
             this.tableName = tableName;
@@ -40,7 +42,7 @@ public class InsertQuery {
             return this;
         }
 
-        public void setValueList(List<String> valueList) {
+        public void setValueList(List<ComparableValue> valueList) {
             this.valueList = valueList;
         }
 

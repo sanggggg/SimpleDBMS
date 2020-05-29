@@ -34,34 +34,17 @@ public class QueryManager {
             if (query.getColumnName() == null || query.getColumnName().size() == 0) {
                 for (int iter = 0; iter < query.getValueList().size(); iter++) {
                     ColumnDefinition col = table.getColumnList().get(iter);
-                    String value = query.getValueList().get(iter);
-                    DataType valType;
-                    switch (value.split("'")[0]) {
-                        case "int":
-                            valType = DataType.INTEGER;
-                            break;
-                        case "char":
-                            valType = DataType.CHARACTER;
-                            break;
-                        case "date":
-                            valType = DataType.DATE;
-                            break;
-                        case "null":
-                            valType = null;
-                            break;
-                        default:
-                            throw new InsertTypeMismatchError();
-                    }
+                    ComparableValue value = query.getValueList().get(iter);
 
-                    if (valType == null) {
+                    if (value.getValue() == null) {
                         if (col.getConstraint().equals("not null"))
                             throw new InsertColumnNonNullableError(col.getColumnName());
                         entry.put(col.getColumnName(), null);
                     } else {
-                        if (col.getDataType().getDataType() != valType) throw new InsertTypeMismatchError();
-                        String valData = value.split("'")[1];
+                        if (col.getDataType().getDataType() != value.getDataType()) throw new InsertTypeMismatchError();
                         // Char length 맞춰 cutting
-                        if (col.getDataType().getDataType() == DataType.CHARACTER && col.getDataType().getCharLength() < valData.length()) {
+                        String valData = value.getValue();
+                        if (col.getDataType().getDataType() == DataType.CHARACTER && col.getDataType().getCharLength() < value.getValue().length()) {
                             valData = valData.substring(0, col.getDataType().getCharLength());
                         }
                         entry.put(col.getColumnName(), valData);
