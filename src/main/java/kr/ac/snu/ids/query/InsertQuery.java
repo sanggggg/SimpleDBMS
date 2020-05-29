@@ -7,6 +7,18 @@ public class InsertQuery {
     private List<String> columnName;
     private List<String> valueList;
 
+    public String getTableName() {
+        return tableName;
+    }
+
+    public List<String> getColumnName() {
+        return columnName;
+    }
+
+    public List<String> getValueList() {
+        return valueList;
+    }
+
     public InsertQuery(String tableName, List<String> columnName, List<String> valueList) {
         this.tableName = tableName;
         this.columnName = columnName;

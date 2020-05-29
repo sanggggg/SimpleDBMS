@@ -12,7 +12,7 @@ package kr.ac.snu.ids;
 import com.sleepycat.je.*;
 import kr.ac.snu.ids.db.BerKeleyDB;
 import kr.ac.snu.ids.db.DataDefinitionManager;
-import kr.ac.snu.ids.definition.*;
+import kr.ac.snu.ids.db.QueryManager;import kr.ac.snu.ids.definition.*;
 import kr.ac.snu.ids.exceptions.DefinitionError;
 import kr.ac.snu.ids.exceptions.create.CreateTableError;
 import kr.ac.snu.ids.exceptions.NoSuchTableError;
@@ -38,11 +38,7 @@ public class SimpleDBMSParser
 
     public static final int PRINT_SELECT_QUERY = 7;
 
-    public static DataDefinitionManager dbManager = null;
-
     public static void main(String[] args) throws ParseException {
-        Database db = BerKeleyDB.getInstance();
-        dbManager = new DataDefinitionManager(db);
 
         SimpleDBMSParser parser = new SimpleDBMSParser(System.in);
         System.out.print("DB_2018-15366> ");
@@ -253,7 +249,7 @@ String createTableQuery() :
             tableInfo = builder
                 .setTableName(_tableName)
                 .create();
-            dbManager.createSchema(tableInfo);
+            DataDefinitionManager.createSchema(tableInfo);
 
             message = String.format("'%s' table is created", _tableName);
         } catch (DefinitionError e) {
@@ -275,7 +271,7 @@ String dropTableQuery() :
 
     {
         try {
-            dbManager.dropSchema(_tableName);
+            DataDefinitionManager.dropSchema(_tableName);
             message = String.format("'%s' table is dropped", _tableName);
         } catch (DefinitionError e) {
             message = e.getMessage();
@@ -294,7 +290,7 @@ String descTableQuery() :
       _tableName = tableName()
     {
         try {
-            message = dbManager.getSchema(_tableName).toString();
+            message = DataDefinitionManager.getSchema(_tableName).toString();
         } catch (NoSuchTableError e) {
             message = e.getMessage();
         }
@@ -309,7 +305,7 @@ String showTableQuery() :
 {
     < SHOW > < TABLES >
     {
-        List<String> names = dbManager.getTableNames();
+        List<String> names = DataDefinitionManager.getTableNames();
         if (names.isEmpty()) {
             message = "There is no table";
         } else {
@@ -331,9 +327,16 @@ String insertQuery() :
     _tableName = tableName()
     insertColumnsAndSource(builder)
     {
-        builder.setTableName(_tableName);
-        System.out.println(builder.create().toString());
-        return "The row is inserted";
+        String message;
+        try {
+            InsertQuery query =builder.setTableName(_tableName)
+                .create();
+            QueryManager.insertQuery(query);
+            message = "The row is inserted";
+        } catch (DefinitionError e) {
+            message = e.getMessage();
+        }
+        return message;
     }
 }
 
@@ -481,9 +484,9 @@ String comparableValue() :
     Token t;
 }
 {
-    t = < INT_VALUE > { return t.toString(); } |
-    t = < CHAR_STRING > { return t.toString(); } |
-    t = < DATE_VALUE > { return t.toString(); }
+    t = < INT_VALUE > { return "int'" + t.toString(); } |
+    t = < CHAR_STRING > { return "char'" + t.toString().replace("'", ""); } |
+    t = < DATE_VALUE > { return "date'" + t.toString(); }
 }
 
 void nullPredicate() :
@@ -654,7 +657,7 @@ String value() :
     String _value;
 }
 {
-  < NULL > { _value = "NULL"; } |
+  < NULL > { _value = "null'null"; } |
   _value = comparableValue()
 
   { return _value; }

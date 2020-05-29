@@ -21,13 +21,9 @@ import java.util.stream.Collectors;
 
 public class DataDefinitionManager {
 
-    private Database db;
+    private static Database db = BerKeleyDB.getInstance();
 
-    public DataDefinitionManager(Database db) {
-        this.db = db;
-    }
-
-    private void validateForeignKey(ForeignKeyDefinition foreignKeyDefinition, List<ColumnDefinition> referingColumn) {
+    private static void validateForeignKey(ForeignKeyDefinition foreignKeyDefinition, List<ColumnDefinition> referingColumn) {
 
         boolean tableMatchFlag = false;
 
@@ -76,7 +72,7 @@ public class DataDefinitionManager {
             throw new ReferenceTableExistenceError();
     }
 
-    private List<ColumnDefinition> extractColumn(List<ColumnDefinition> origin, List<String> target) {
+    private static List<ColumnDefinition> extractColumn(List<ColumnDefinition> origin, List<String> target) {
         return target.stream().map(
                 referingKey -> {
                     for (ColumnDefinition item : origin) {
@@ -88,7 +84,7 @@ public class DataDefinitionManager {
         ).collect(Collectors.toList());
     }
 
-    private boolean validateSchema(TableDefinition tableDefinition) throws CreateTableError {
+    private static boolean validateSchema(TableDefinition tableDefinition) throws CreateTableError {
         try (Cursor cursor = db.openCursor(null, null)) {
             DatabaseEntry targetKey = new DatabaseEntry(tableDefinition.getTableName().getBytes(StandardCharsets.UTF_8));
             DatabaseEntry dataBody = new DatabaseEntry();
@@ -145,7 +141,7 @@ public class DataDefinitionManager {
         return true;
     }
 
-    public void createSchema(TableDefinition tableDefinition) {
+    public static void createSchema(TableDefinition tableDefinition) {
         byte[] serializeSchema;
 
         validateSchema(tableDefinition);
@@ -164,7 +160,7 @@ public class DataDefinitionManager {
         }
     }
 
-    public void dropSchema(String tableName) throws NoSuchTableError, DropTableError {
+    public static void dropSchema(String tableName) throws NoSuchTableError, DropTableError {
 
         try (Cursor cursor = db.openCursor(null, null)) {
             DatabaseEntry targetKey = new DatabaseEntry(tableName.getBytes(StandardCharsets.UTF_8));
@@ -193,7 +189,7 @@ public class DataDefinitionManager {
         }
     }
 
-    public TableDefinition getSchema(String tableName) throws NoSuchTableError {
+    public static TableDefinition getSchema(String tableName) throws NoSuchTableError {
         TableDefinition tableDefinition = null;
 
         try (Cursor cursor = db.openCursor(null, null)) {
@@ -210,7 +206,7 @@ public class DataDefinitionManager {
         return tableDefinition;
     }
 
-    public List<String> getTableNames() {
+    public static List<String> getTableNames() {
         List<String> tables = new ArrayList<>();
 
         try (Cursor iter = db.openCursor(null, null)) {
@@ -227,13 +223,9 @@ public class DataDefinitionManager {
         return tables;
     }
 
-    private TableDefinition inflateSchema(byte[] data) throws IOException, ClassNotFoundException {
+    private static TableDefinition inflateSchema(byte[] data) throws IOException, ClassNotFoundException {
         ByteArrayInputStream bais = new ByteArrayInputStream(data);
         ObjectInputStream ois = new ObjectInputStream(bais);
         return (TableDefinition) ois.readObject();
     }
-
-    // 바이트 배열로 생성된 직렬화 데이터를 base64로 변환
-//    System.out.println(Base64.getEncoder().encodeToString(serializedMember));
-
 }
