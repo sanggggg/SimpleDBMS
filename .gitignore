@@ -193,6 +193,6 @@ gradle-app.setting
 **/build/
 
 lib/
-db/
+.db/
 
 # End of https://www.gitignore.io/api/java,gradle,intellij,intellij+all
