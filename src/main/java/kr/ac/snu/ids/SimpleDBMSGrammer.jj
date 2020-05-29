@@ -16,7 +16,7 @@ import kr.ac.snu.ids.db.QueryManager;import kr.ac.snu.ids.definition.*;
 import kr.ac.snu.ids.exceptions.DefinitionError;
 import kr.ac.snu.ids.exceptions.create.CreateTableError;
 import kr.ac.snu.ids.exceptions.NoSuchTableError;
-import kr.ac.snu.ids.query.InsertQuery;
+import kr.ac.snu.ids.query.InsertQuery;import kr.ac.snu.ids.query.SelectQuery;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -59,32 +59,6 @@ public class SimpleDBMSParser
     * lastLine은 유저의 queryList 입력이 끝난 경우 true이며 이때 콘솔에 prompt를 출력한다.
     */
     public static void printMessage(String q, boolean lastLine) {
-//        switch(q) {
-//            case PRINT_SYNTAX_ERROR:
-//                System.out.println("Syntax error");
-//                break;
-//            case PRINT_CREATE_TABLE:
-//                System.out.println("'CREATE TABLE' requested");
-//                break;
-//            case PRINT_DROP_TABLE:
-//                System.out.println("'DROP TABLE' requested");
-//                break;
-//            case PRINT_DESC:
-//                System.out.println("'DESC' requested");
-//                break;
-//            case PRINT_SHOW_TABLES:
-//                System.out.println("'SHOW TABLES' requested");
-//                break;
-//            case PRINT_INSERT_QUERY:
-//                System.out.println("'INSERT' requested");
-//                break;
-//            case PRINT_DELETE_QUERY:
-//                System.out.println("'DELETE' requested");
-//                break;
-//            case PRINT_SELECT_QUERY:
-//                System.out.println("'SELECT' requested");
-//            break;
-//        }
         System.out.println(q);
         if (lastLine)
             System.out.print("DB_2018-15366> ");
@@ -214,18 +188,13 @@ String query() :
         message = dropTableQuery() |
         message = descTableQuery() |
         message = showTableQuery() |
-        message = insertQuery()
-//        {
-//            q = PRINT_INSERT_QUERY;
-//        } |
+        message = insertQuery() |
+        message = selectQuery()
 //        deleteQuery()
 //        {
 //            q = PRINT_DELETE_QUERY;
 //        } |
-//        selectQuery()
-//        {
-//            q = PRINT_SELECT_QUERY;
-//        }
+
     )
 
     { return message; }
@@ -348,56 +317,80 @@ void deleteQuery() :
   [whereClause()]
 }
 
-void selectQuery() :
-{}
+String selectQuery() :
 {
-  < SELECT >
-  selectList()
-  tableExpression()
+    SelectQuery.Builder builder = new SelectQuery.Builder();
+    List<String> _selectList;
+    List<String> _tableReferenceList;
+}
+{
+    < SELECT >
+    _selectList = selectList()
+    < FROM >
+    _tableReferenceList = tableReferenceList()
+    [ whereClause() ]
+    {
+        SelectQuery query = builder.setSelectColumnList(_selectList)
+            .setTableReferenceList(_tableReferenceList)
+            .create();
+        System.out.println(query.toString());
+        return "end select";
+    }
 }
 
-void selectList() :
-{}
+List<String> selectList() :
 {
-  < ASTERISK >
-  | selectedColumn() (< COMMA > selectedColumn())*
+    List<String> _selectList = new ArrayList<>();
+    String _selectedColumn;
+}
+{
+    (
+        < ASTERISK > { _selectList.add("*"); }
+        | _selectedColumn = selectedColumn() { _selectList.add(_selectedColumn);}
+        (< COMMA > _selectedColumn = selectedColumn() { _selectList.add(_selectedColumn);})*
+    )
+    { return _selectList; }
 }
 
-void selectedColumn() :
-{}
+String selectedColumn() :
 {
-  // table name column name에 선점 당하는 것을 막기 위한 LOOKAHEAD 처리
-  [ LOOKAHEAD(2) tableName() < PERIOD >]
-  columnName()
-  [ < AS > columnName() ]
+    String _selectedColumn = "";
+    String tmp;
+}
+{
+    // table name column name에 선점 당하는 것을 막기 위한 LOOKAHEAD 처리
+    (
+        [ LOOKAHEAD(2) tmp = tableName() { _selectedColumn = _selectedColumn.concat(tmp + "."); } < PERIOD >]
+        tmp = columnName() { _selectedColumn = _selectedColumn.concat(tmp); }
+        [ < AS > tmp = columnName() { _selectedColumn = _selectedColumn.concat("@" + tmp); } ]
+    )
+    { return _selectedColumn; }
 }
 
-void tableExpression() :
-{}
+List<String> tableReferenceList() :
 {
-  fromClause()
-  [ whereClause() ]
+    List<String> _tableReferenceList = new ArrayList<>();
+    String _referedTable;
+}
+{
+    (
+        _referedTable = referedTable() { _tableReferenceList.add(_referedTable); }
+        (< COMMA > _referedTable = referedTable() { _tableReferenceList.add(_referedTable); })*
+    )
+    { return _tableReferenceList; }
 }
 
-void fromClause() :
-{}
+String referedTable() :
 {
-  < FROM >
-  tableReferenceList()
+    String _referedTable;
+    String tmp;
 }
-
-void tableReferenceList() :
-{}
 {
-  referedTable()
-  (< COMMA > referedTable())*
-}
-
-void referedTable() :
-{}
-{
-  tableName()
-  [ < AS > tableName()]
+    (
+        tmp = tableName() { _referedTable = tmp; }
+        [ < AS > tmp = tableName() { _referedTable = _referedTable.concat("@" + tmp); }]
+    )
+    { return _referedTable; }
 }
 
 void whereClause() :
