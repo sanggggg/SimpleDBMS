@@ -1,14 +1,8 @@
 package kr.ac.snu.ids.definition;
 
-import com.sleepycat.je.Database;
-import com.sleepycat.je.DatabaseEntry;
-
 import java.io.Serializable;
-import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.ListIterator;
-import java.util.Map;
 
 public class TableDefinition implements Serializable {
 
@@ -42,13 +36,13 @@ public class TableDefinition implements Serializable {
 
     public static class Builder {
         private String tableName;
-        private ArrayList<ColumnDefinition> columnList = new ArrayList<ColumnDefinition>();
-        private ArrayList<String> primaryKeys = new ArrayList<String>();
-        private ArrayList<ForeignKeyDefinition> foreignKeys = new ArrayList<ForeignKeyDefinition>();
+        private ArrayList<ColumnDefinition> columnList = new ArrayList<>();
+        private ArrayList<String> primaryKeys = new ArrayList<>();
+        private ArrayList<ForeignKeyDefinition> foreignKeys = new ArrayList<>();
         private boolean dirty = false;
 
         public Builder setTableName(String tableName) {
-            this.tableName = tableName.toLowerCase();
+            this.tableName = tableName;
             return this;
         }
 
@@ -66,9 +60,6 @@ public class TableDefinition implements Serializable {
             if (!this.primaryKeys.isEmpty()) {
                 dirty = true;
             } else {
-                ListIterator<String> iter = primaryKeys.listIterator();
-                while (iter.hasNext()) { iter.set(iter.next().toLowerCase()); }
-
                 this.primaryKeys = primaryKeys;
             }
             return this;
@@ -89,10 +80,10 @@ public class TableDefinition implements Serializable {
 
     @Override
     public String toString() {
-        List<String> columnInfos = new ArrayList<String>();
+        List<String> columnInfos = new ArrayList<>();
 
         for (ColumnDefinition col : columnList) {
-            List<String> keyInfo = new ArrayList<String>();
+            List<String> keyInfo = new ArrayList<>();
 
             if (primaryKeys.contains(col.columnName)) {
                 keyInfo.add("PRI");

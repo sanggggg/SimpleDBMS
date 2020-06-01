@@ -1,9 +1,6 @@
 package kr.ac.snu.ids.db;
 
-import com.sleepycat.je.Database;
-import com.sleepycat.je.DatabaseConfig;
-import com.sleepycat.je.Environment;
-import com.sleepycat.je.EnvironmentConfig;
+import com.sleepycat.je.*;
 
 import java.io.File;
 import java.util.HashMap;
@@ -33,6 +30,9 @@ public class BerKeleyDB {
     }
 
     public static void closeDatabase() {
+        TableIterator.openedCursors.forEach(Cursor::close);
+        RowIterator.openedCursors.forEach(Cursor::close);
+
         if (INSTANCE != null) INSTANCE.close();
 
         for (Map.Entry<String, Database> elem : tableInstance.entrySet()) {

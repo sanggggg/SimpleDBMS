@@ -84,7 +84,7 @@ public class DataDefinitionManager {
         ).collect(Collectors.toList());
     }
 
-    private static boolean validateSchema(TableDefinition tableDefinition) throws CreateTableError {
+    private static void validateSchema(TableDefinition tableDefinition) throws CreateTableError {
         try (Cursor cursor = db.openCursor(null, null)) {
             DatabaseEntry targetKey = new DatabaseEntry(tableDefinition.getTableName().getBytes(StandardCharsets.UTF_8));
             DatabaseEntry dataBody = new DatabaseEntry();
@@ -127,7 +127,6 @@ public class DataDefinitionManager {
 
 
             }
-//            tableDefinition.getForeignKeys().forEach(this::validateForeignKey);
 
             // primary key 인 column 들에 not null 부여
             for (ColumnDefinition item : tableDefinition.getColumnList()) {
@@ -136,9 +135,6 @@ public class DataDefinitionManager {
                 }
             }
         }
-
-
-        return true;
     }
 
     public static void createSchema(TableDefinition tableDefinition) {

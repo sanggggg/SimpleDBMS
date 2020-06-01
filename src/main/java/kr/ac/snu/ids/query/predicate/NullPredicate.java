@@ -23,7 +23,7 @@ public class NullPredicate implements BooleanCondition {
     }
 
     @Override
-    public boolean execute(TupleData tuple) {
+    public WhereBoolean execute(TupleData tuple) {
         String identifier;
 
         if (tableName != null) {
@@ -32,13 +32,13 @@ public class NullPredicate implements BooleanCondition {
             identifier = colName;
         }
 
-        if (tableName != null && tuple.getTableName().contains(tableName)) throw new WhereTableNotSpecifiedError();
+        if (tableName != null && !tuple.getTableName().contains(tableName)) throw new WhereTableNotSpecifiedError();
 
         if (tuple.getAmbiguous().contains(identifier)) throw new WhereAmbiguousReferenceError();
 
         if (!tuple.getEntry().containsKey(identifier)) throw new WhereColumnNotExistError();
 
-        return isNull == (tuple.getEntry().get(identifier) == null);
+        return isNull == (tuple.getEntry().get(identifier) == null) ? WhereBoolean.TRUE : WhereBoolean.FALSE;
     }
 
     @Override

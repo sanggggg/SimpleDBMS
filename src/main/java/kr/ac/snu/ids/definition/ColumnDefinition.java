@@ -36,7 +36,7 @@ public class ColumnDefinition implements Serializable {
         private String constraint = "";
 
         public Builder setColumnName(String columnName) {
-            this.columnName = columnName.toLowerCase();
+            this.columnName = columnName;
             return this;
         }
 
@@ -46,7 +46,7 @@ public class ColumnDefinition implements Serializable {
         }
 
         public Builder setConstraint(String constraint) {
-            this.constraint = constraint.toLowerCase();
+            this.constraint = constraint;
             return this;
         }
 

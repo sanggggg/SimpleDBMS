@@ -10,16 +10,16 @@ import kr.ac.snu.ids.exceptions.where.WhereTableNotSpecifiedError;
 
 public class ComparisonPredicate implements BooleanCondition {
 
-    private ComparableValue left;
-    private ComparableValue right;
+    private ComparableValue leftForm;
+    private ComparableValue rightForm;
     private String operator;
 
     public void setLeft(ComparableValue left) {
-        this.left = left;
+        this.leftForm = left;
     }
 
     public void setRight(ComparableValue right) {
-        this.right = right;
+        this.rightForm = right;
     }
 
     public void setOperator(String operator) {
@@ -29,9 +29,10 @@ public class ComparisonPredicate implements BooleanCondition {
     private ComparableValue fillData(ComparableValue val, TupleData tuple) {
         String tableName = null;
         String colName;
+
         if (val.getValue().contains(".")) {
-            tableName = val.getValue().split(".")[0];
-            colName = val.getValue().split(".")[1];
+            tableName = val.getValue().split("\\.")[0];
+            colName = val.getValue().split("\\.")[1];
         } else {
             colName = val.getValue();
         }
@@ -44,7 +45,7 @@ public class ComparisonPredicate implements BooleanCondition {
             identifier = colName;
         }
 
-        if (tableName != null && tuple.getTableName().contains(tableName)) throw new WhereTableNotSpecifiedError();
+        if (tableName != null && !tuple.getTableName().contains(tableName)) throw new WhereTableNotSpecifiedError();
 
         if (tuple.getAmbiguous().contains(identifier)) throw new WhereAmbiguousReferenceError();
 
@@ -54,13 +55,19 @@ public class ComparisonPredicate implements BooleanCondition {
     }
 
     @Override
-    public boolean execute(TupleData tuple) {
-        if (left.getDataType() == DataType.TABLECOL) left = fillData(left, tuple);
-        if (right.getDataType() == DataType.TABLECOL) right = fillData(right, tuple);
+    public WhereBoolean execute(TupleData tuple) {
+        ComparableValue left;
+        ComparableValue right;
+        if (leftForm.getDataType() == DataType.TABLECOL) left = fillData(leftForm, tuple);
+        else left = leftForm;
+        if (rightForm.getDataType() == DataType.TABLECOL) right = fillData(rightForm, tuple);
+        else right = rightForm;
 
         if (left.getDataType() != right.getDataType()) throw new WhereIncomparableError();
 
         int compResult;
+
+        if (left.getValue() == null || right.getValue() == null) return WhereBoolean.UNDEFINED;
 
         switch (left.getDataType()) {
             case INTEGER:
@@ -71,25 +78,22 @@ public class ComparisonPredicate implements BooleanCondition {
                 compResult = left.getValue().compareTo(right.getValue());
                 break;
             default:
-                return false;
+                return WhereBoolean.FALSE;
         }
 
-        switch (compResult) {
-            case -1:
-                return operator.equals("<") || operator.equals("<=") || operator.equals("!=");
-            case 0:
-                return operator.equals("<=") || operator.equals(">=") || operator.equals("=");
-            case 1:
-                return operator.equals(">") || operator.equals(">=") || operator.equals("!=");
-        }
-        return false;
+        if (compResult < 0)
+            return operator.equals("<") || operator.equals("<=") || operator.equals("!=") ? WhereBoolean.TRUE : WhereBoolean.FALSE;
+        else if (compResult == 0)
+            return operator.equals("<=") || operator.equals(">=") || operator.equals("=") ? WhereBoolean.TRUE : WhereBoolean.FALSE;
+        else
+            return operator.equals(">") || operator.equals(">=") || operator.equals("!=") ? WhereBoolean.TRUE : WhereBoolean.FALSE;
     }
 
     @Override
     public String toString() {
         return "ComparisonPredicate{" +
-                "left=" + left +
-                ", right=" + right +
+                "leftForm=" + leftForm +
+                ", rightForm=" + rightForm +
                 ", operator='" + operator + '\'' +
                 '}';
     }

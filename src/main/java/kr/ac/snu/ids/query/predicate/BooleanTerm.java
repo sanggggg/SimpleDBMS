@@ -20,10 +20,17 @@ public class BooleanTerm implements BooleanCondition {
     }
 
     @Override
-    public boolean execute(TupleData tuple) {
+    public WhereBoolean execute(TupleData tuple) {
+        WhereBoolean result;
+        boolean undefined = false;
         for (BooleanCondition factor : factors) {
-            if (!factor.execute(tuple)) return false;
+            result = factor.execute(tuple);
+            if (result == WhereBoolean.FALSE) return WhereBoolean.FALSE;
+            else if (result == WhereBoolean.UNDEFINED) undefined = true;
+
         }
-        return true;
+
+        if (undefined) return WhereBoolean.UNDEFINED;
+        return WhereBoolean.TRUE;
     }
 }

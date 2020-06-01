@@ -17,6 +17,10 @@ public class InsertQuery {
         return columnName;
     }
 
+    public void setValueList(List<ComparableValue> valueList) {
+        this.valueList = valueList;
+    }
+
     public List<ComparableValue> getValueList() {
         return valueList;
     }

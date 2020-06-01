@@ -2,7 +2,6 @@ package kr.ac.snu.ids.definition;
 
 import java.io.Serializable;
 import java.util.ArrayList;
-import java.util.ListIterator;
 
 public class ForeignKeyDefinition implements Serializable {
     private String referencedTableName;
@@ -37,20 +36,16 @@ public class ForeignKeyDefinition implements Serializable {
         private ArrayList<String> referencingColumnList;
 
         public Builder setReferencedTableName(String referencedTableName) {
-            this.referencedTableName = referencedTableName.toLowerCase();
+            this.referencedTableName = referencedTableName;
             return this;
         }
 
         public Builder setReferencedColumn(ArrayList<String> columnList) {
-            ListIterator<String> iter = columnList.listIterator();
-            while (iter.hasNext()) { iter.set(iter.next().toLowerCase()); }
             this.referencedColumnList = columnList;
             return this;
         }
 
         public Builder setReferencingColumn(ArrayList<String> columnList) {
-            ListIterator<String> iter = columnList.listIterator();
-            while (iter.hasNext()) { iter.set(iter.next().toLowerCase()); }
             this.referencingColumnList = columnList;
             return this;
         }

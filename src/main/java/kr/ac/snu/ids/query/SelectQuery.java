@@ -5,36 +5,39 @@ import kr.ac.snu.ids.query.predicate.BooleanCondition;
 import java.util.List;
 
 public class SelectQuery {
-    private List<String> selectColumnList;
-    private List<String> tableReferenceList;
+    private List<TableReference> tableReferenceList;
+    private List<ColumnReference> columnReferenceList;
     private BooleanCondition condition;
 
-    public SelectQuery(List<String> selectColumnList, List<String> tableReferenceList, BooleanCondition condition) {
-        this.selectColumnList = selectColumnList;
+    public SelectQuery(List<ColumnReference> columnReferenceList, List<TableReference> tableReferenceList, BooleanCondition condition) {
+        this.columnReferenceList = columnReferenceList;
         this.tableReferenceList = tableReferenceList;
         this.condition = condition;
     }
 
-    @Override
-    public String toString() {
-        return "SelectQuery{" +
-                "selectColumnList=" + selectColumnList +
-                ", tableReferenceList=" + tableReferenceList +
-                ", condition=" + condition +
-                '}';
+    public List<ColumnReference> getColumnReferenceList() {
+        return columnReferenceList;
+    }
+
+    public List<TableReference> getTableReferenceList() {
+        return tableReferenceList;
+    }
+
+    public BooleanCondition getCondition() {
+        return condition;
     }
 
     public static class Builder {
-        private List<String> selectColumnList;
-        private List<String> tableReferenceList;
+        private List<ColumnReference> columnReferenceList;
+        private List<TableReference> tableReferenceList;
         private BooleanCondition condition;
 
-        public Builder setSelectColumnList(List<String> selectColumnList) {
-            this.selectColumnList = selectColumnList;
+        public Builder setColumnReferenceList(List<ColumnReference> columnReferenceList) {
+            this.columnReferenceList = columnReferenceList;
             return this;
         }
 
-        public Builder setTableReferenceList(List<String> tableReferenceList) {
+        public Builder setTableReferenceList(List<TableReference> tableReferenceList) {
             this.tableReferenceList = tableReferenceList;
             return this;
         }
@@ -45,7 +48,7 @@ public class SelectQuery {
         }
 
         public SelectQuery create() {
-            return new SelectQuery(selectColumnList, tableReferenceList, condition);
+            return new SelectQuery(columnReferenceList, tableReferenceList, condition);
         }
     }
 

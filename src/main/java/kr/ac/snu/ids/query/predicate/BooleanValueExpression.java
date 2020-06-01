@@ -13,11 +13,15 @@ public class BooleanValueExpression implements BooleanCondition {
     }
 
     @Override
-    public boolean execute(TupleData tuple) {
+    public WhereBoolean execute(TupleData tuple) {
+        boolean undefined = false;
         for (BooleanCondition term : terms) {
-            if (term.execute(tuple)) return true;
+            if (term.execute(tuple) == WhereBoolean.TRUE) return WhereBoolean.TRUE;
+            else if (term.execute(tuple) == WhereBoolean.UNDEFINED) undefined = true;
         }
-        return false;
+
+        if (undefined) return WhereBoolean.UNDEFINED;
+        return WhereBoolean.FALSE;
     }
 
     @Override

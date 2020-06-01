@@ -9,17 +9,14 @@ PARSER_BEGIN(SimpleDBMSParser)
 
 package kr.ac.snu.ids;
 
-import com.sleepycat.je.*;
 import kr.ac.snu.ids.db.BerKeleyDB;
 import kr.ac.snu.ids.db.ComparableValue;
 import kr.ac.snu.ids.db.DataDefinitionManager;
 import kr.ac.snu.ids.db.QueryManager;
 import kr.ac.snu.ids.definition.*;
 import kr.ac.snu.ids.exceptions.DefinitionError;
-import kr.ac.snu.ids.exceptions.create.CreateTableError;
 import kr.ac.snu.ids.exceptions.NoSuchTableError;
-import kr.ac.snu.ids.query.InsertQuery;
-import kr.ac.snu.ids.query.SelectQuery;
+import kr.ac.snu.ids.query.*;
 import kr.ac.snu.ids.query.predicate.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -63,7 +60,7 @@ public class SimpleDBMSParser
     * lastLine은 유저의 queryList 입력이 끝난 경우 true이며 이때 콘솔에 prompt를 출력한다.
     */
     public static void printMessage(String q, boolean lastLine) {
-        System.out.println(q);
+        if (!q.isEmpty()) System.out.println(q);
         if (lastLine)
             System.out.print("DB_2018-15366> ");
     }
@@ -193,8 +190,8 @@ String query() :
         message = descTableQuery() |
         message = showTableQuery() |
         message = insertQuery() |
-        message = selectQuery()
-//        deleteQuery()
+        message = selectQuery() |
+        message = deleteQuery()
 //        {
 //            q = PRINT_DELETE_QUERY;
 //        } |
@@ -313,19 +310,38 @@ String insertQuery() :
     }
 }
 
-void deleteQuery() :
-{}
+String deleteQuery() :
 {
-  < DELETE > < FROM >
-  tableName()
-  [whereClause()]
+    String _tableName;
+    BooleanCondition _condition = null;
+}
+{
+    (
+        < DELETE > < FROM >
+        _tableName = tableName()
+        [ _condition = whereClause()]
+    )
+    {
+        String message = null;
+        DeleteQuery.Builder builder = new DeleteQuery.Builder();
+        try {
+            DeleteQuery query =builder.setTableName(_tableName)
+                .setCondition(_condition)
+                .create();
+            int deleteNum = QueryManager.deleteQuery(query);
+            message = String.format("%d row(s) are deleted", deleteNum);
+        } catch (DefinitionError e) {
+          message = e.getMessage();
+        }
+        return message;
+    }
 }
 
 String selectQuery() :
 {
     SelectQuery.Builder builder = new SelectQuery.Builder();
-    List<String> _selectList;
-    List<String> _tableReferenceList;
+    List<ColumnReference> _selectList;
+    List<TableReference> _tableReferenceList;
     BooleanCondition _condition = null;
 }
 {
@@ -335,48 +351,55 @@ String selectQuery() :
     _tableReferenceList = tableReferenceList()
     [ _condition = whereClause() ]
     {
-        SelectQuery query = builder.setSelectColumnList(_selectList)
+    String message = null;
+    try {
+        SelectQuery query = builder.setColumnReferenceList(_selectList)
             .setTableReferenceList(_tableReferenceList)
             .setCondition(_condition)
             .create();
-        System.out.println(query.toString());
-        return "end select";
+        QueryManager.selectQuery(query);
+        return "";
+    } catch(DefinitionError e) {
+        message = e.getMessage();
     }
+    return message;
+}
 }
 
-List<String> selectList() :
+List<ColumnReference> selectList() :
 {
-    List<String> _selectList = new ArrayList<>();
-    String _selectedColumn;
+    List<ColumnReference> _selectList = new ArrayList<>();
+    ColumnReference _selectedColumn;
 }
 {
     (
-        < ASTERISK > { _selectList.add("*"); }
+        < ASTERISK > { _selectList.add(new ColumnReference("*", null, null)); }
         | _selectedColumn = selectedColumn() { _selectList.add(_selectedColumn);}
         (< COMMA > _selectedColumn = selectedColumn() { _selectList.add(_selectedColumn);})*
     )
     { return _selectList; }
 }
 
-String selectedColumn() :
+ColumnReference selectedColumn() :
 {
-    String _selectedColumn = "";
-    String tmp;
+    String _tableName = null;
+    String _columnName = null;
+    String _alias = null;
 }
 {
     // table name column name에 선점 당하는 것을 막기 위한 LOOKAHEAD 처리
     (
-        [ LOOKAHEAD(2) tmp = tableName() { _selectedColumn = _selectedColumn.concat(tmp + "."); } < PERIOD >]
-        tmp = columnName() { _selectedColumn = _selectedColumn.concat(tmp); }
-        [ < AS > tmp = columnName() { _selectedColumn = _selectedColumn.concat("@" + tmp); } ]
+        [ LOOKAHEAD(2) _tableName = tableName() < PERIOD >]
+        _columnName = columnName()
+        [ < AS > _alias = columnName() ]
     )
-    { return _selectedColumn; }
+    { return new ColumnReference(_columnName, _tableName, _alias); }
 }
 
-List<String> tableReferenceList() :
+List<TableReference> tableReferenceList() :
 {
-    List<String> _tableReferenceList = new ArrayList<>();
-    String _referedTable;
+    List<TableReference> _tableReferenceList = new ArrayList<>();
+    TableReference _referedTable;
 }
 {
     (
@@ -386,17 +409,17 @@ List<String> tableReferenceList() :
     { return _tableReferenceList; }
 }
 
-String referedTable() :
+TableReference referedTable() :
 {
-    String _referedTable;
-    String tmp;
+    String _tableName = null;
+    String _alias = null;
 }
 {
     (
-        tmp = tableName() { _referedTable = tmp; }
-        [ < AS > tmp = tableName() { _referedTable = _referedTable.concat("@" + tmp); }]
+        _tableName = tableName()
+        [ < AS > _alias = tableName() ]
     )
-    { return _referedTable; }
+    { return new TableReference(_tableName, _alias); }
 }
 
 BooleanCondition whereClause() :
@@ -539,7 +562,7 @@ ComparableValue comparableValue() :
 {
     t = < INT_VALUE > { return new ComparableValue(DataType.INTEGER, t.toString()); } |
     t = < CHAR_STRING > { return new ComparableValue(DataType.CHARACTER, t.toString().replace("'", "")); } |
-    t = < DATE_VALUE > { new ComparableValue(DataType.DATE, t.toString()); }
+    t = < DATE_VALUE > { return new ComparableValue(DataType.DATE, t.toString()); }
 }
 
 BooleanCondition nullPredicate() :
@@ -668,7 +691,7 @@ ArrayList<ComparableValue> valueList() :
 
 ArrayList<String> columnNameList() :
 {
-    ArrayList<String> _columnNameList = new ArrayList<String>();
+    ArrayList<String> _columnNameList = new ArrayList<>();
     String _columnName;
 }
 {
@@ -704,7 +727,7 @@ String tableName() :
 {
     _tableName = < LEGAL_IDENTIFIER >
     {
-        return _tableName.toString();
+        return _tableName.toString().toUpperCase();
     }
 }
 
@@ -714,7 +737,7 @@ String columnName() :
 }
 {
     _columnName = < LEGAL_IDENTIFIER >
-    { return _columnName.toString(); }
+    { return _columnName.toString().toUpperCase(); }
 }
 
 ComparableValue value() :
@@ -722,8 +745,9 @@ ComparableValue value() :
     ComparableValue _value;
 }
 {
-  < NULL > { _value = new ComparableValue(DataType.CHARACTER, null); } |
-  _value = comparableValue()
-
-  { return _value; }
+    (
+        < NULL > { _value = new ComparableValue(DataType.CHARACTER, null); } |
+        _value = comparableValue()
+    )
+    { return _value; }
 }

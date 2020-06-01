@@ -2,6 +2,8 @@ package kr.ac.snu.ids.query.predicate;
 
 import kr.ac.snu.ids.db.TupleData;
 
+import static kr.ac.snu.ids.query.predicate.WhereBoolean.UNDEFINED;
+
 public class BooleanFactor implements BooleanCondition {
     private Boolean isNot;
     private BooleanCondition test;
@@ -15,15 +17,16 @@ public class BooleanFactor implements BooleanCondition {
     }
 
     @Override
-    public String toString() {
-        return "BooleanFactor{" +
-                "isNot=" + isNot +
-                ", test=" + test +
-                '}';
-    }
-
-    @Override
-    public boolean execute(TupleData tuple) {
-        return isNot ^ test.execute(tuple);
+    public WhereBoolean execute(TupleData tuple) {
+        switch (test.execute(tuple)) {
+            case UNDEFINED:
+                return UNDEFINED;
+            case TRUE:
+                return isNot ? WhereBoolean.FALSE : WhereBoolean.TRUE;
+            case FALSE:
+                return isNot ? WhereBoolean.TRUE : WhereBoolean.FALSE;
+        }
+        // Hmmm...
+        return UNDEFINED;
     }
 }
