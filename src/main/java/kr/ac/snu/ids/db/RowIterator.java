@@ -97,8 +97,7 @@ public class RowIterator {
 
     boolean delete() {
         if (!toFirst) {
-            cursor.delete();
-            return true;
+            return cursor.delete() == OperationStatus.SUCCESS;
         } else {
             return false;
         }

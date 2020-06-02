@@ -179,6 +179,12 @@ public class DataDefinitionManager {
 
             iter.close();
 
+            RowIterator iterator = new RowIterator(tableName);
+            while (iterator.next() != null) {
+                iterator.delete();
+            }
+            iterator.close();
+
             cursor.delete();
         } catch (IOException | ClassNotFoundException e) {
             e.printStackTrace();

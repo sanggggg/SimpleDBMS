@@ -104,18 +104,19 @@ public class QueryManager {
         RowIterator iter = new RowIterator(tableDefinition.getTableName());
         Map<String, String> row;
 
-        // Consistency check 가 필요한 table 정보
         while ((row = iter.next()) != null) {
             TupleData tuple = new TupleData();
 
             tuple = tuple.concatRow(tableDefinition, row);
 
+            // where 문으로 걸러진 column에 대해 consistency를 유지하고 최종적으로 delete
             if (query.getCondition() == null || query.getCondition().execute(tuple) == WhereBoolean.TRUE) {
                 TableIterator tableIterator = new TableIterator();
                 TableDefinition iTableDefinition;
                 List<TableDefinition> referringTables = new ArrayList<>();
                 boolean deletable = true;
 
+                // foreign key consistency 유지를 위해 referring table 의 상태를 확인
                 while ((iTableDefinition = tableIterator.next()) != null) {
                     if (iTableDefinition.isReferingTable(tableDefinition.getTableName())) {
                         for (ForeignKeyDefinition referringFkey : iTableDefinition.getForeignKeys()) {
@@ -138,6 +139,7 @@ public class QueryManager {
                 }
                 tableIterator.close();
 
+                // delete 가능한 row 일시, referring table 의 매치되는 tuple을 null 로 값을 치환하고 삭제
                 if (deletable) {
                     for (TableDefinition referringTable : referringTables) {
                         for (ForeignKeyDefinition referringFkey : referringTable.getForeignKeys()) {
@@ -160,10 +162,12 @@ public class QueryManager {
         iter.close();
 
         if (failedCount != 0)
-            System.out.println(String.format("[%d] row(s) are not deleted due to referential integrity", failedCount));
+            System.out.println(String.format("%d row(s) are not deleted due to referential integrity", failedCount));
         return deleteCount;
     }
 
+    // delete 시 foreignKey consistency를 체크하고,(onlyChecking true)
+    // nullable 여부를 판단하여 적절한 방법으로 consistency를 유지 (onlyChecking false)
     private static boolean maintainConsistency(TableDefinition tableDefinition, List<String> keyColumns, List<String> targetData, boolean onlyChecking) {
         RowIterator iter = new RowIterator(tableDefinition.getTableName());
         Map<String, String> row;
@@ -202,6 +206,7 @@ public class QueryManager {
         return true;
     }
 
+    // pkey, fkey consistency를 위해 테이블에 해당 column과 value가 존재하는지 확인
     private static boolean existCheck(List<String> tuplePkey, List<String> primaryKeys, String tableName) {
         // No pkey
         if (primaryKeys.size() == 0) return false;
@@ -226,6 +231,7 @@ public class QueryManager {
         return false;
     }
 
+    // 새로운 table을 가지고 기존의 tuple과 cartesian product 진행
     private static List<TupleData> cartesianProduct(List<TupleData> old, TableDefinition tableDefinition, TableReference tableReference) {
         List<TupleData> attached = new ArrayList<>();
 
@@ -294,15 +300,12 @@ public class QueryManager {
         validColumnReferenceCheck(query);
 
         // 실제 콘솔에 출력
-        for (ColumnReference columnReference : query.getColumnReferenceList()) {
-            columnReference.getIdentifier();
-        }
-
-
         printTuples(accumTuple, query.getColumnReferenceList());
     }
 
-    private static void validColumnReferenceCheck(SelectQuery query) {
+    // Select 문의 query column 에 있는 naming 이 모두 판단 가능한 지 확인
+    // 판단 불가시 SelectColumnResolveError 던짐
+    private static void validColumnReferenceCheck(SelectQuery query) throws SelectColumnResolveError {
         List<String> validIdentifier = new ArrayList<>();
         List<String> ambiguousIdentifier = new ArrayList<>();
 
@@ -330,10 +333,16 @@ public class QueryManager {
         }
     }
 
+    // 최종적으로 모아진 tuple 들을 출
     private static void printTuples(List<TupleData> tuples, List<ColumnReference> columnReferenceList) {
         String header = "";
         String index = "";
         String row;
+
+        if (tuples.size() == 0) {
+            System.out.println("Empty set");
+            return;
+        }
 
         for (ColumnReference columnReference : columnReferenceList) {
             String showName = columnReference.getShowName();

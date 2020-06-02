@@ -48,7 +48,6 @@ public class SimpleDBMSParser
                 SimpleDBMSParser.command();
             }
             catch (Exception e) {
-                e.printStackTrace();
                 printMessage("Syntax error", true);
                 SimpleDBMSParser.ReInit(System.in);
             }
