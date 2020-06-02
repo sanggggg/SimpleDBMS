@@ -41,7 +41,6 @@ public class SimpleDBMSParser implements SimpleDBMSParserConstants {
                 SimpleDBMSParser.command();
             }
             catch (Exception e) {
-                e.printStackTrace();
                 printMessage("Syntax error", true);
                 SimpleDBMSParser.ReInit(System.in);
             }
@@ -829,32 +828,35 @@ printMessage(q, false);
                 break;
             }
             default:
-      jj_la1[23] = jj_gen;
-      ;
+                jj_la1[23] = jj_gen;
+                ;
+        }
+        {
+            if ("" != null) return columnBuilder.create();
+        }
+        throw new Error("Missing return statement in function");
     }
-{if ("" != null) return columnBuilder.create();}
-    throw new Error("Missing return statement in function");
-}
 
-  static final public void tableConstraintDefinition(TableDefinition.Builder builder) throws ParseException {ForeignKeyDefinition foreignKeyDefinition;
-    ArrayList<String> primaryKeyList;
-    switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
-        case PRIMARY: {
-            primaryKeyList = primaryKeyConstraint();
-            builder.setPrimaryKeys(primaryKeyList);
-            break;
+    static final public void tableConstraintDefinition(TableDefinition.Builder builder) throws ParseException {
+        ForeignKeyDefinition foreignKeyDefinition;
+        ArrayList<String> primaryKeyList;
+        switch ((jj_ntk == -1) ? jj_ntk_f() : jj_ntk) {
+            case PRIMARY: {
+                primaryKeyList = primaryKeyConstraint();
+                builder.setPrimaryKeys(primaryKeyList);
+                break;
+            }
+            case FOREIGN: {
+                foreignKeyDefinition = referentialConstraint();
+                builder.addForeignKey(foreignKeyDefinition);
+                break;
+            }
+            default:
+                jj_la1[24] = jj_gen;
+                jj_consume_token(-1);
+                throw new ParseException();
         }
-        case FOREIGN: {
-            foreignKeyDefinition = referentialConstraint();
-            builder.addForeignKey(foreignKeyDefinition);
-            break;
-        }
-        default:
-            jj_la1[24] = jj_gen;
-            jj_consume_token(-1);
-            throw new ParseException();
     }
-  }
 
     static final public ArrayList<String> primaryKeyConstraint() throws ParseException {
         ArrayList<String> compositePk;
@@ -1362,7 +1364,9 @@ printMessage(q, false);
         for (int i = 0; i < jj_2_rtns.length; i++) jj_2_rtns[i] = new JJCalls();
     }
 
-  /** Constructor with generated Token Manager. */
+    /**
+     * Constructor with generated Token Manager.
+     */
   public SimpleDBMSParser(SimpleDBMSParserTokenManager tm) {
 	 if (jj_initialized_once) {
 	   System.out.println("ERROR: Second call to constructor of static parser. ");
